@@ -121,31 +121,17 @@ export default function TimeLogsPage() {
     const fetchClients = async () => {
         if (!profile?.id) return
 
-        const { data: userTasks } = await supabase
-            .from("tasks")
-            .select("client_id, project_id, projects(client_id)")
-            .eq("assigned_to", profile.id)
-            .neq("status", "finished")
-
-        if (!userTasks || userTasks.length === 0) {
-            setClients([])
-            return
-        }
-
-        const clientIds = [...new Set(
-            userTasks.map((t: any) => t.client_id || t.projects?.client_id).filter(Boolean)
-        )]
-
-        if (clientIds.length === 0) {
-            setClients([])
-            return
-        }
-
-        const { data } = await supabase
+        // Gracias al RLS actualizado, simplemente pedimos los clientes.
+        // La base de datos solo devolverá aquellos donde el usuario sea parte del equipo o tenga proyectos.
+        const { data, error } = await supabase
             .from("clients")
             .select("*")
-            .in("id", clientIds)
             .order("name")
+
+        if (error) {
+            console.error("Error fetching clients:", error)
+            return
+        }
 
         setClients(data || [])
     }
@@ -180,7 +166,8 @@ export default function TimeLogsPage() {
         let query = supabase
             .from("tasks")
             .select("*, projects(name, client_id)")
-            .eq("assigned_to", profile?.id)
+            // Quitamos el filtro de assigned_to para que vea todas las tareas de la empresa
+            // El RLS ya se encarga de que solo vea las de sus empresas/proyectos
             .neq("status", "finished")
 
         if (projectIds.length > 0) {
