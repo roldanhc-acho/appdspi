@@ -30,6 +30,7 @@ export default function AgendaPage() {
     const [filter, setFilter] = useState<"all" | "public" | "private">("all")
     const [editingEvent, setEditingEvent] = useState<Event | null>(null)
     const [profiles, setProfiles] = useState<{ id: string, full_name: string | null }[]>([])
+    const [error, setError] = useState<string | null>(null)
 
     const [formData, setFormData] = useState({
         title: "",
@@ -57,6 +58,7 @@ export default function AgendaPage() {
 
     const fetchEvents = async () => {
         try {
+            setError(null)
             let query = supabase
                 .from("events")
                 .select("*")
@@ -71,8 +73,9 @@ export default function AgendaPage() {
             const { data, error } = await query
             if (error) throw error
             setEvents(data || [])
-        } catch (error) {
+        } catch (error: any) {
             console.error("Error fetching events:", error)
+            setError("Error al cargar eventos: " + (error.message || "Error desconocido"))
         } finally {
             setLoading(false)
         }
@@ -178,9 +181,11 @@ export default function AgendaPage() {
             fetchEvents()
             setShowModal(false)
             setEditingEvent(null)
-        } catch (error) {
+        } catch (error: any) {
             console.error("Error saving event:", error)
-            alert("Error al guardar el evento")
+            const errorMessage = error.message || "Error desconocido"
+            const errorDetails = error.details || error.hint || ""
+            alert(`Error al guardar el evento: ${errorMessage}\n${errorDetails}`)
         }
     }
 
@@ -207,6 +212,11 @@ export default function AgendaPage() {
                     <p className="text-sm text-slate-500 dark:text-slate-400">
                         Gestiona tus eventos y recordatorios
                     </p>
+                    {error && (
+                        <div className="mt-2 text-sm text-red-500 bg-red-50 dark:bg-red-900/20 p-2 rounded">
+                            {error}
+                        </div>
+                    )}
                 </div>
 
                 <div className="flex items-center gap-2">
@@ -316,199 +326,203 @@ export default function AgendaPage() {
             </div>
 
             {/* Modal */}
+            {/* Modal */}
             {showModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-                    <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl dark:bg-slate-900">
-                        <div className="mb-4 flex items-center justify-between">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+                    <div className="flex max-h-[90vh] w-full max-w-md flex-col rounded-xl bg-white shadow-xl dark:bg-slate-900">
+                        <div className="flex items-center justify-between border-b p-4 dark:border-slate-800">
                             <h2 className="text-xl font-bold dark:text-white">
                                 {editingEvent ? "Editar Evento" : "Nuevo Evento"}
                             </h2>
                             <button onClick={() => { setShowModal(false); setEditingEvent(null); }}>
-                                <X className="h-5 w-5 text-slate-500" />
+                                <X className="h-5 w-5 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300" />
                             </button>
                         </div>
 
-                        <form onSubmit={handleSubmit} className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium dark:text-gray-300">
-                                    Título
-                                </label>
-                                <input
-                                    type="text"
-                                    required
-                                    value={formData.title}
-                                    onChange={(e) =>
-                                        setFormData({ ...formData, title: e.target.value })
-                                    }
-                                    className="w-full rounded-md border p-2 dark:bg-slate-800 dark:border-slate-700 dark:text-white"
-                                    placeholder="Nombre del evento"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium dark:text-gray-300">
-                                    Descripción (opcional)
-                                </label>
-                                <textarea
-                                    value={formData.description}
-                                    onChange={(e) =>
-                                        setFormData({ ...formData, description: e.target.value })
-                                    }
-                                    className="w-full rounded-md border p-2 dark:bg-slate-800 dark:border-slate-700 dark:text-white"
-                                    rows={3}
-                                    placeholder="Detalles adicionales..."
-                                />
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-4">
+                        <div className="overflow-y-auto p-6">
+                            <form id="event-form" onSubmit={handleSubmit} className="space-y-4">
                                 <div>
                                     <label className="block text-sm font-medium dark:text-gray-300">
-                                        Fecha
+                                        Título
                                     </label>
                                     <input
-                                        type="date"
+                                        type="text"
                                         required
-                                        value={formData.event_date}
+                                        value={formData.title}
                                         onChange={(e) =>
-                                            setFormData({ ...formData, event_date: e.target.value })
+                                            setFormData({ ...formData, title: e.target.value })
                                         }
                                         className="w-full rounded-md border p-2 dark:bg-slate-800 dark:border-slate-700 dark:text-white"
+                                        placeholder="Nombre del evento"
                                     />
                                 </div>
 
                                 <div>
                                     <label className="block text-sm font-medium dark:text-gray-300">
-                                        Hora (opcional)
+                                        Descripción (opcional)
                                     </label>
-                                    <input
-                                        type="time"
-                                        value={formData.event_time}
+                                    <textarea
+                                        value={formData.description}
                                         onChange={(e) =>
-                                            setFormData({ ...formData, event_time: e.target.value })
+                                            setFormData({ ...formData, description: e.target.value })
                                         }
                                         className="w-full rounded-md border p-2 dark:bg-slate-800 dark:border-slate-700 dark:text-white"
+                                        rows={3}
+                                        placeholder="Detalles adicionales..."
                                     />
                                 </div>
-                            </div>
 
-                            <div>
-                                <label className="block text-sm font-medium dark:text-gray-300 mb-2">
-                                    Repetición
-                                </label>
-                                <select
-                                    value={formData.recurrence}
-                                    onChange={(e) =>
-                                        setFormData({ ...formData, recurrence: e.target.value as RecurrenceType })
-                                    }
-                                    className="w-full rounded-md border p-2 dark:bg-slate-800 dark:border-slate-700 dark:text-white"
-                                >
-                                    <option value="once">Una sola vez</option>
-                                    <option value="weekly">Cada semana</option>
-                                    <option value="monthly">Cada mes</option>
-                                    <option value="yearly">Cada año</option>
-                                </select>
-                            </div>
-
-                            <div>
-                                <label className="flex items-center gap-2 cursor-pointer">
-                                    <input
-                                        type="checkbox"
-                                        checked={formData.requires_confirmation}
-                                        onChange={(e) =>
-                                            setFormData({ ...formData, requires_confirmation: e.target.checked })
-                                        }
-                                        className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
-                                    />
-                                    <span className="text-sm font-medium dark:text-gray-300">
-                                        Requiere confirmación (no desaparece hasta marcarlo)
-                                    </span>
-                                </label>
-                            </div>
-
-                            <div>
-                                <label className="flex items-center gap-2 block text-sm font-medium dark:text-gray-300 mb-2">
-                                    <Users className="h-4 w-4" />
-                                    Participantes
-                                </label>
-                                <div className="max-h-40 overflow-y-auto rounded-md border p-2 dark:bg-slate-800 dark:border-slate-700 custom-scrollbar mb-4">
-                                    {profiles.map(p => (
-                                        <label key={p.id} className="flex items-center gap-2 py-1.5 px-2 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700/50 rounded transition-colors">
-                                            <input
-                                                type="checkbox"
-                                                checked={formData.participant_ids.includes(p.id)}
-                                                onChange={(e) => {
-                                                    const newIds = e.target.checked
-                                                        ? [...formData.participant_ids, p.id]
-                                                        : formData.participant_ids.filter(id => id !== p.id)
-                                                    setFormData({ ...formData, participant_ids: newIds })
-                                                }}
-                                                className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
-                                            />
-                                            <span className="text-sm dark:text-gray-300">{p.full_name || "Sin nombre"}</span>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-medium dark:text-gray-300">
+                                            Fecha
                                         </label>
-                                    ))}
-                                    {profiles.length === 0 && (
-                                        <p className="text-sm text-slate-500 text-center py-2">No hay usuarios disponibles</p>
-                                    )}
-                                </div>
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium dark:text-gray-300 mb-2">
-                                    Visibilidad
-                                </label>
-                                <div className="flex gap-4">
-                                    <label className={`flex items-center gap-2 ${isAdmin ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'}`}>
                                         <input
-                                            type="radio"
-                                            name="visibility"
-                                            checked={formData.is_public}
-                                            disabled={!isAdmin}
-                                            onChange={() =>
-                                                setFormData({ ...formData, is_public: true })
+                                            type="date"
+                                            required
+                                            value={formData.event_date}
+                                            onChange={(e) =>
+                                                setFormData({ ...formData, event_date: e.target.value })
                                             }
-                                            className="text-indigo-600"
+                                            className="w-full rounded-md border p-2 dark:bg-slate-800 dark:border-slate-700 dark:text-white"
                                         />
-                                        <Globe className="h-4 w-4 text-green-500" />
-                                        <span className="text-sm dark:text-gray-300">Público</span>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-medium dark:text-gray-300">
+                                            Hora (opcional)
+                                        </label>
+                                        <input
+                                            type="time"
+                                            value={formData.event_time}
+                                            onChange={(e) =>
+                                                setFormData({ ...formData, event_time: e.target.value })
+                                            }
+                                            className="w-full rounded-md border p-2 dark:bg-slate-800 dark:border-slate-700 dark:text-white"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium dark:text-gray-300 mb-2">
+                                        Repetición
                                     </label>
+                                    <select
+                                        value={formData.recurrence}
+                                        onChange={(e) =>
+                                            setFormData({ ...formData, recurrence: e.target.value as RecurrenceType })
+                                        }
+                                        className="w-full rounded-md border p-2 dark:bg-slate-800 dark:border-slate-700 dark:text-white"
+                                    >
+                                        <option value="once">Una sola vez</option>
+                                        <option value="weekly">Cada semana</option>
+                                        <option value="monthly">Cada mes</option>
+                                        <option value="yearly">Cada año</option>
+                                    </select>
+                                </div>
+
+                                <div>
                                     <label className="flex items-center gap-2 cursor-pointer">
                                         <input
-                                            type="radio"
-                                            name="visibility"
-                                            checked={!formData.is_public}
-                                            onChange={() =>
-                                                setFormData({ ...formData, is_public: false })
+                                            type="checkbox"
+                                            checked={formData.requires_confirmation}
+                                            onChange={(e) =>
+                                                setFormData({ ...formData, requires_confirmation: e.target.checked })
                                             }
-                                            className="text-indigo-600"
+                                            className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
                                         />
-                                        <Lock className="h-4 w-4 text-purple-500" />
-                                        <span className="text-sm dark:text-gray-300">Privado</span>
+                                        <span className="text-sm font-medium dark:text-gray-300">
+                                            Requiere confirmación (no desaparece hasta marcarlo)
+                                        </span>
                                     </label>
                                 </div>
-                                <p className="mt-1 text-xs text-slate-500">
-                                    {isAdmin
-                                        ? "Los eventos públicos son visibles para todos los usuarios."
-                                        : "Solo los administradores pueden crear eventos públicos."}
-                                </p>
-                            </div>
 
-                            <div className="flex justify-end gap-2 pt-2">
-                                <button
-                                    type="button"
-                                    onClick={() => { setShowModal(false); setEditingEvent(null); }}
-                                    className="rounded-md px-4 py-2 text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
-                                >
-                                    Cancelar
-                                </button>
-                                <button
-                                    type="submit"
-                                    className="rounded-md bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-700"
-                                >
-                                    {editingEvent ? "Guardar Cambios" : "Crear Evento"}
-                                </button>
-                            </div>
-                        </form>
+                                <div>
+                                    <label className="flex items-center gap-2 block text-sm font-medium dark:text-gray-300 mb-2">
+                                        <Users className="h-4 w-4" />
+                                        Participantes
+                                    </label>
+                                    <div className="max-h-40 overflow-y-auto rounded-md border p-2 dark:bg-slate-800 dark:border-slate-700 custom-scrollbar mb-4">
+                                        {profiles.map(p => (
+                                            <label key={p.id} className="flex items-center gap-2 py-1.5 px-2 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700/50 rounded transition-colors">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={formData.participant_ids.includes(p.id)}
+                                                    onChange={(e) => {
+                                                        const newIds = e.target.checked
+                                                            ? [...formData.participant_ids, p.id]
+                                                            : formData.participant_ids.filter(id => id !== p.id)
+                                                        setFormData({ ...formData, participant_ids: newIds })
+                                                    }}
+                                                    className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                                                />
+                                                <span className="text-sm dark:text-gray-300">{p.full_name || "Sin nombre"}</span>
+                                            </label>
+                                        ))}
+                                        {profiles.length === 0 && (
+                                            <p className="text-sm text-slate-500 text-center py-2">No hay usuarios disponibles</p>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium dark:text-gray-300 mb-2">
+                                        Visibilidad
+                                    </label>
+                                    <div className="flex gap-4">
+                                        <label className={`flex items-center gap-2 ${isAdmin ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'}`}>
+                                            <input
+                                                type="radio"
+                                                name="visibility"
+                                                checked={formData.is_public}
+                                                disabled={!isAdmin}
+                                                onChange={() =>
+                                                    setFormData({ ...formData, is_public: true })
+                                                }
+                                                className="text-indigo-600"
+                                            />
+                                            <Globe className="h-4 w-4 text-green-500" />
+                                            <span className="text-sm dark:text-gray-300">Público</span>
+                                        </label>
+                                        <label className="flex items-center gap-2 cursor-pointer">
+                                            <input
+                                                type="radio"
+                                                name="visibility"
+                                                checked={!formData.is_public}
+                                                onChange={() =>
+                                                    setFormData({ ...formData, is_public: false })
+                                                }
+                                                className="text-indigo-600"
+                                            />
+                                            <Lock className="h-4 w-4 text-purple-500" />
+                                            <span className="text-sm dark:text-gray-300">Privado</span>
+                                        </label>
+                                    </div>
+                                    <p className="mt-1 text-xs text-slate-500">
+                                        {isAdmin
+                                            ? "Los eventos públicos son visibles para todos los usuarios."
+                                            : "Solo los administradores pueden crear eventos públicos."}
+                                    </p>
+                                </div>
+                            </form>
+                        </div>
+
+                        <div className="flex justify-end gap-2 border-t p-4 dark:border-slate-800">
+                            <button
+                                type="button"
+                                onClick={() => { setShowModal(false); setEditingEvent(null); }}
+                                className="rounded-md px-4 py-2 text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                form="event-form"
+                                type="submit"
+                                className="rounded-md bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-700"
+                            >
+                                {editingEvent ? "Guardar Cambios" : "Crear Evento"}
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}
