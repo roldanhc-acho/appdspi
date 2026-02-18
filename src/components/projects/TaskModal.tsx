@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react"
 import { supabase } from "@/lib/supabase"
 import type { Database } from "@/types/database.types"
-import { Plus, X, Trash2, User, ChevronRight, Clock } from "lucide-react"
+import { Plus, X, Trash2, ChevronRight, Clock } from "lucide-react"
 import { parseISO, isBefore } from "date-fns"
 import { countWorkingDays } from "@/utils/holidays"
 import { formatDateForInput, prepareDateForSave } from "@/utils/dateUtils"
@@ -294,7 +294,7 @@ export function TaskModal({ isOpen, onClose, onSuccess, initialData, projects = 
                 start_date: prepareDateForSave(formData.start_date),
                 due_date: prepareDateForSave(formData.due_date),
                 assigned_to: formData.assigned_users[0] || null, // Keep legacy field updated with first user
-                estimated_hours: totalEstimated
+                estimated_hours: formData.estimated_hours
             }
 
             if (taskId) {
@@ -464,7 +464,7 @@ export function TaskModal({ isOpen, onClose, onSuccess, initialData, projects = 
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-3 gap-4">
                         <div>
                             <label className="block text-sm font-medium dark:text-gray-300">Estado</label>
                             <select
@@ -478,13 +478,37 @@ export function TaskModal({ isOpen, onClose, onSuccess, initialData, projects = 
                                 <option value="cancelled">Suspendido/Cancelado</option>
                             </select>
                         </div>
-                        <div className="flex flex-col justify-end">
-                            <div className="flex items-center gap-2 rounded bg-slate-50 p-2 dark:bg-slate-800/50">
-                                <Clock className="h-4 w-4 text-blue-500" />
-                                <div>
-                                    <p className="text-[10px] uppercase text-slate-500">Horas Estimadas</p>
-                                    <p className="text-sm font-bold dark:text-white">{totalEstimated}h</p>
-                                </div>
+                        <div>
+                            <label className="block text-sm font-medium dark:text-gray-300">Prioridad</label>
+                            <select
+                                value={formData.priority}
+                                onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
+                                className="w-full rounded border p-2 dark:bg-slate-800 dark:border-slate-700 dark:text-white"
+                            >
+                                <option value="low">Baja</option>
+                                <option value="medium">Media</option>
+                                <option value="high">Alta</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium dark:text-gray-300">Horas Estimadas</label>
+                            <div className="flex items-center">
+                                <input
+                                    type="number"
+                                    min="0"
+                                    step="0.5"
+                                    value={formData.estimated_hours}
+                                    onChange={(e) => setFormData({ ...formData, estimated_hours: parseFloat(e.target.value) || 0 })}
+                                    className="w-full rounded border p-2 dark:bg-slate-800 dark:border-slate-700 dark:text-white"
+                                />
+                                {initialData?.parent_task_id && (
+                                    <div className="ml-2 text-xs text-slate-400 group relative">
+                                        <Clock className="h-4 w-4" />
+                                        <span className="absolute bottom-full right-0 w-max rounded bg-black px-2 py-1 text-white opacity-0 group-hover:opacity-100 transition-opacity">
+                                            Sugerido por fechas: {totalEstimated}h
+                                        </span>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>

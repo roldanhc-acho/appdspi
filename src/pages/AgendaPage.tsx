@@ -2,7 +2,7 @@ import { useState, useEffect } from "react"
 import { supabase } from "@/lib/supabase"
 import { useAuth } from "@/contexts/AuthContext"
 import type { Database } from "@/types/database.types"
-import { Plus, Calendar, Globe, Lock, Trash2, X, Clock, Pencil, RefreshCw } from "lucide-react"
+import { Plus, Calendar, Globe, Lock, Trash2, X, Clock, Pencil, RefreshCw, Users } from "lucide-react"
 import { format } from "date-fns"
 import { es } from "date-fns/locale"
 
@@ -29,6 +29,7 @@ export default function AgendaPage() {
     const [showModal, setShowModal] = useState(false)
     const [filter, setFilter] = useState<"all" | "public" | "private">("all")
     const [editingEvent, setEditingEvent] = useState<Event | null>(null)
+    const [profiles, setProfiles] = useState<{ id: string, full_name: string | null }[]>([])
 
     const [formData, setFormData] = useState({
         title: "",
@@ -37,8 +38,18 @@ export default function AgendaPage() {
         event_time: "",
         is_public: true,
         recurrence: "once" as RecurrenceType,
-        requires_confirmation: false
+        requires_confirmation: false,
+        participant_ids: [] as string[]
     })
+
+    useEffect(() => {
+        fetchProfiles()
+    }, [])
+
+    const fetchProfiles = async () => {
+        const { data } = await supabase.from("profiles").select("id, full_name").order("full_name")
+        setProfiles(data || [])
+    }
 
     useEffect(() => {
         fetchEvents()
@@ -76,13 +87,23 @@ export default function AgendaPage() {
             event_time: "",
             is_public: isAdmin,
             recurrence: "once",
-            requires_confirmation: false
+            requires_confirmation: false,
+            participant_ids: []
         })
         setShowModal(true)
     }
 
-    const openEditModal = (event: Event) => {
+    const openEditModal = async (event: Event) => {
         setEditingEvent(event)
+
+        // Fetch participants
+        const { data } = await supabase
+            .from("event_participants")
+            .select("user_id")
+            .eq("event_id", event.id)
+
+        const participantIds = data?.map(p => p.user_id) || []
+
         setFormData({
             title: event.title,
             description: event.description || "",
@@ -90,7 +111,8 @@ export default function AgendaPage() {
             event_time: event.event_time || "",
             is_public: event.is_public,
             recurrence: (event.recurrence as RecurrenceType) || "once",
-            requires_confirmation: event.requires_confirmation
+            requires_confirmation: event.requires_confirmation,
+            participant_ids: participantIds
         })
         setShowModal(true)
     }
@@ -100,6 +122,8 @@ export default function AgendaPage() {
         if (!profile) return
 
         try {
+            let eventId = editingEvent?.id
+
             if (editingEvent) {
                 // Update existing event
                 const { error } = await supabase
@@ -118,7 +142,7 @@ export default function AgendaPage() {
                 if (error) throw error
             } else {
                 // Create new event
-                const { error } = await supabase.from("events").insert({
+                const { data, error } = await supabase.from("events").insert({
                     title: formData.title,
                     description: formData.description || null,
                     event_date: formData.event_date,
@@ -128,9 +152,27 @@ export default function AgendaPage() {
                     requires_confirmation: formData.requires_confirmation,
                     is_confirmed: false,
                     created_by: profile.id
-                })
+                }).select().single()
 
                 if (error) throw error
+                eventId = data.id
+            }
+
+            // Update participants
+            if (eventId) {
+                // Delete existing participants
+                await supabase.from("event_participants").delete().eq("event_id", eventId)
+
+                // Insert new participants
+                if (formData.participant_ids.length > 0) {
+                    const participantsData = formData.participant_ids.map(uid => ({
+                        event_id: eventId!,
+                        user_id: uid,
+                        status: 'pending'
+                    }))
+                    const { error: partError } = await supabase.from("event_participants").insert(participantsData)
+                    if (partError) throw partError
+                }
             }
 
             fetchEvents()
@@ -381,6 +423,34 @@ export default function AgendaPage() {
                                         Requiere confirmación (no desaparece hasta marcarlo)
                                     </span>
                                 </label>
+                            </div>
+
+                            <div>
+                                <label className="flex items-center gap-2 block text-sm font-medium dark:text-gray-300 mb-2">
+                                    <Users className="h-4 w-4" />
+                                    Participantes
+                                </label>
+                                <div className="max-h-40 overflow-y-auto rounded-md border p-2 dark:bg-slate-800 dark:border-slate-700 custom-scrollbar mb-4">
+                                    {profiles.map(p => (
+                                        <label key={p.id} className="flex items-center gap-2 py-1.5 px-2 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700/50 rounded transition-colors">
+                                            <input
+                                                type="checkbox"
+                                                checked={formData.participant_ids.includes(p.id)}
+                                                onChange={(e) => {
+                                                    const newIds = e.target.checked
+                                                        ? [...formData.participant_ids, p.id]
+                                                        : formData.participant_ids.filter(id => id !== p.id)
+                                                    setFormData({ ...formData, participant_ids: newIds })
+                                                }}
+                                                className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                                            />
+                                            <span className="text-sm dark:text-gray-300">{p.full_name || "Sin nombre"}</span>
+                                        </label>
+                                    ))}
+                                    {profiles.length === 0 && (
+                                        <p className="text-sm text-slate-500 text-center py-2">No hay usuarios disponibles</p>
+                                    )}
+                                </div>
                             </div>
 
                             <div>

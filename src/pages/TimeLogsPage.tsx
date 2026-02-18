@@ -15,7 +15,7 @@ import {
     isSameMonth
 } from "date-fns"
 import { es } from "date-fns/locale"
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Plus, CheckCircle, Trash2, PiggyBank } from "lucide-react"
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, CheckCircle, Trash2, PiggyBank } from "lucide-react"
 import { isNonWorkingDay } from "@/utils/holidays"
 
 type TimeLog = Database["public"]["Tables"]["time_logs"]["Row"] & {
