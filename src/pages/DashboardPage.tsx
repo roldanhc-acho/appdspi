@@ -217,10 +217,10 @@ export default function DashboardPage() {
 
         // Completed Tasks (Current Month vs Last)
         const completedThisMonth = allTasks.filter(t =>
-            t.status === 'done' && new Date(t.updated_at) >= currentMonthStart
+            t.status === 'finished' && new Date(t.updated_at) >= currentMonthStart
         ).length
         const completedLastMonth = allTasks.filter(t =>
-            t.status === 'done' &&
+            t.status === 'finished' &&
             new Date(t.updated_at) >= lastMonthStart &&
             new Date(t.updated_at) < currentMonthStart
         ).length
@@ -241,7 +241,7 @@ export default function DashboardPage() {
         }
 
         // Assigned Tasks (Top pending)
-        const pendingTasks = allTasks.filter(t => t.status !== 'done')
+        const pendingTasks = allTasks.filter(t => t.status !== 'finished' && t.status !== 'cancelled')
 
         const activity = [
             ...logs.slice(0, 3).map(l => ({
@@ -250,7 +250,7 @@ export default function DashboardPage() {
                 desc: `${l.hours_worked} horas en ${l.tasks?.projects?.name || 'Unknown Project'}`,
                 time: l.created_at
             })),
-            ...allTasks.filter(t => t.status === 'done').slice(0, 3).map(t => ({
+            ...allTasks.filter(t => t.status === 'finished').slice(0, 3).map(t => ({
                 type: 'task',
                 title: 'Tarea completada',
                 desc: `${t.title} - ${t.projects?.name}`,
@@ -472,7 +472,7 @@ export default function DashboardPage() {
                     <div className="space-y-4 max-h-[460px] overflow-y-auto pr-2 custom-scrollbar">
                         {tasks.map(task => {
                             const progress = taskProgress[task.id] || 0
-                            const isOverdue = task.due_date && new Date(task.due_date) < new Date(new Date().setHours(0, 0, 0, 0)) && task.status !== 'done'
+                            const isOverdue = task.due_date && new Date(task.due_date) < new Date(new Date().setHours(0, 0, 0, 0)) && task.status !== 'finished' && task.status !== 'cancelled'
 
                             return (
                                 <div key={task.id} className={`group flex flex-col gap-2 rounded-lg border p-3 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors ${isOverdue ? 'border-red-500/50 bg-red-500/5' : ''}`}>
