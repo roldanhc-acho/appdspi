@@ -20,7 +20,8 @@ export default function AbsencePage() {
         start_date: "",
         end_date: "",
         type: "vacation",
-        reason: ""
+        reason: "",
+        hours: 9
     })
 
     useEffect(() => {
@@ -60,6 +61,7 @@ export default function AbsencePage() {
                 end_date: formData.end_date,
                 type: formData.type as any,
                 reason: formData.reason,
+                hours: formData.hours,
                 status: "pending"
             }])
 
@@ -67,7 +69,7 @@ export default function AbsencePage() {
 
             fetchAbsences()
             setShowModal(false)
-            setFormData({ start_date: "", end_date: "", type: "vacation", reason: "" })
+            setFormData({ start_date: "", end_date: "", type: "vacation", reason: "", hours: 9 })
         } catch (error) {
             console.error("Error creating request:", error)
             alert("Error creating request")
@@ -111,12 +113,13 @@ export default function AbsencePage() {
                 <table className="w-full text-left text-sm">
                     <thead className="bg-slate-50 text-slate-500 dark:bg-slate-900 dark:text-slate-400">
                         <tr>
-                            <th className="px-4 py-3 font-medium">Employee</th>
-                            <th className="px-4 py-3 font-medium">Type</th>
-                            <th className="px-4 py-3 font-medium">Dates</th>
-                            <th className="px-4 py-3 font-medium">Reason</th>
-                            <th className="px-4 py-3 font-medium">Status</th>
-                            {isAdmin && <th className="px-4 py-3 font-medium">Actions</th>}
+                            <th className="px-4 py-3 font-medium">Empleado</th>
+                            <th className="px-4 py-3 font-medium">Tipo</th>
+                            <th className="px-4 py-3 font-medium">Fechas</th>
+                            <th className="px-4 py-3 font-medium">Horas</th>
+                            <th className="px-4 py-3 font-medium">Motivo</th>
+                            <th className="px-4 py-3 font-medium">Estado</th>
+                            {isAdmin && <th className="px-4 py-3 font-medium">Acciones</th>}
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
@@ -129,6 +132,9 @@ export default function AbsencePage() {
                                         <span>{new Date(absence.start_date).toLocaleDateString()}</span>
                                         <span>to {new Date(absence.end_date).toLocaleDateString()}</span>
                                     </div>
+                                </td>
+                                <td className="px-4 py-3 text-slate-500 text-center">
+                                    {absence.hours != null ? `${absence.hours}h` : "9h"}
                                 </td>
                                 <td className="px-4 py-3 text-slate-500 max-w-xs truncate" title={absence.reason || ""}>
                                     {absence.reason || "-"}
@@ -199,8 +205,24 @@ export default function AbsencePage() {
                                     <option value="vacation">Vacaciones</option>
                                     <option value="sickness">Enfermedad</option>
                                     <option value="study">Estudio</option>
+                                    <option value="suspension">Suspension</option>
                                     <option value="other">Otro</option>
                                 </select>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium dark:text-gray-300">
+                                    Horas <span className="text-slate-400 font-normal text-xs">(jornada completa = 9h)</span>
+                                </label>
+                                <input
+                                    type="number"
+                                    min="0.5"
+                                    max="9"
+                                    step="0.5"
+                                    value={formData.hours}
+                                    onChange={(e) => setFormData({ ...formData, hours: parseFloat(e.target.value) || 9 })}
+                                    className="w-full rounded border p-2 dark:bg-slate-800 dark:border-slate-700 dark:text-white"
+                                />
                             </div>
 
                             <div>

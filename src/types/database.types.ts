@@ -19,6 +19,7 @@ export type Database = {
                     attachment_url: string | null
                     created_at: string | null
                     end_date: string
+                    hours: number | null
                     id: string
                     reason: string | null
                     start_date: string
@@ -30,6 +31,7 @@ export type Database = {
                     attachment_url?: string | null
                     created_at?: string | null
                     end_date: string
+                    hours?: number | null
                     id?: string
                     reason?: string | null
                     start_date: string
@@ -41,6 +43,7 @@ export type Database = {
                     attachment_url?: string | null
                     created_at?: string | null
                     end_date?: string
+                    hours?: number | null
                     id?: string
                     reason?: string | null
                     start_date?: string
@@ -568,7 +571,7 @@ export type Database = {
         }
         Enums: {
             absence_status: "pending" | "approved" | "rejected"
-            absence_type: "vacation" | "sickness" | "study" | "other"
+            absence_type: "vacation" | "sickness" | "study" | "other" | "suspension"
             log_type: "regular" | "overtime"
             task_status: "pending" | "in_progress" | "review" | "finished" | "cancelled"
             user_role: "admin" | "employee"
@@ -669,7 +672,7 @@ export const Constants = {
     public: {
         Enums: {
             absence_status: ["pending", "approved", "rejected"],
-            absence_type: ["vacation", "sickness", "study", "other"],
+            absence_type: ["vacation", "sickness", "study", "other", "suspension"],
             log_type: ["regular", "overtime"],
             task_status: ["pending", "in_progress", "review", "finished", "cancelled"],
             user_role: ["admin", "employee"],
