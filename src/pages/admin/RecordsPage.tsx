@@ -467,7 +467,7 @@ export default function RecordsPage() {
                         </div>
                         <div className="p-6 space-y-4">
                             <input type="date" className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white" value={editForm.date} onChange={(e) => setEditForm({ ...editForm, date: e.target.value })} />
-                            <input type="number" step="0.5" className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white" value={editForm.hours_worked} onChange={(e) => setEditForm({ ...editForm, hours_worked: parseFloat(e.target.value) })} />
+                            <input type="number" step="0.01" className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white" value={editForm.hours_worked} onChange={(e) => setEditForm({ ...editForm, hours_worked: parseFloat(e.target.value) })} />
                             <textarea className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white" value={editForm.notes} onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })} placeholder="Notas..." />
                         </div>
                         <div className="px-6 py-4 border-t border-slate-800 flex justify-end gap-3">

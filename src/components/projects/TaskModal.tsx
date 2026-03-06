@@ -496,7 +496,7 @@ export function TaskModal({ isOpen, onClose, onSuccess, initialData, projects = 
                                 <input
                                     type="number"
                                     min="0"
-                                    step="0.5"
+                                    step="0.01"
                                     value={formData.estimated_hours}
                                     onChange={(e) => setFormData({ ...formData, estimated_hours: parseFloat(e.target.value) || 0 })}
                                     className="w-full rounded border p-2 dark:bg-slate-800 dark:border-slate-700 dark:text-white"

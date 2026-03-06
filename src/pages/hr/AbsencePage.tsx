@@ -218,7 +218,7 @@ export default function AbsencePage() {
                                     type="number"
                                     min="0.5"
                                     max="9"
-                                    step="0.5"
+                                    step="0.01"
                                     value={formData.hours}
                                     onChange={(e) => setFormData({ ...formData, hours: parseFloat(e.target.value) || 9 })}
                                     className="w-full rounded border p-2 dark:bg-slate-800 dark:border-slate-700 dark:text-white"

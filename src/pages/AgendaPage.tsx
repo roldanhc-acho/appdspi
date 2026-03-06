@@ -1,15 +1,19 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { supabase } from "@/lib/supabase"
 import { useAuth } from "@/contexts/AuthContext"
 import type { Database } from "@/types/database.types"
-import { Plus, Calendar, Globe, Lock, Trash2, X, Clock, Pencil, RefreshCw, Users } from "lucide-react"
-import { format } from "date-fns"
+import { Plus, Globe, Lock, Trash2, X, Clock, Pencil, RefreshCw, Users, ChevronLeft, ChevronRight } from "lucide-react"
+import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth, isSameDay, addMonths, subMonths } from "date-fns"
 import { es } from "date-fns/locale"
 
 type Event = Database["public"]["Tables"]["events"]["Row"] & {
     recurrence?: string
     requires_confirmation: boolean
     is_confirmed: boolean
+}
+
+type EventWithParticipants = Event & {
+    participant_ids: string[]
 }
 
 type RecurrenceType = "once" | "weekly" | "monthly" | "yearly"
@@ -21,16 +25,20 @@ const recurrenceLabels: Record<RecurrenceType, string> = {
     yearly: "Anual"
 }
 
+const WEEKDAY_NAMES = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"]
+
 export default function AgendaPage() {
     const { profile } = useAuth()
     const isAdmin = profile?.role === "admin"
-    const [events, setEvents] = useState<Event[]>([])
+    const [events, setEvents] = useState<EventWithParticipants[]>([])
     const [loading, setLoading] = useState(true)
     const [showModal, setShowModal] = useState(false)
     const [filter, setFilter] = useState<"all" | "public" | "private">("all")
     const [editingEvent, setEditingEvent] = useState<Event | null>(null)
     const [profiles, setProfiles] = useState<{ id: string, full_name: string | null }[]>([])
     const [error, setError] = useState<string | null>(null)
+    const [currentMonth, setCurrentMonth] = useState(new Date())
+    const [selectedDay, setSelectedDay] = useState<Date | null>(null)
 
     const [formData, setFormData] = useState({
         title: "",
@@ -72,7 +80,34 @@ export default function AgendaPage() {
 
             const { data, error } = await query
             if (error) throw error
-            setEvents(data || [])
+
+            // Fetch participants for all events
+            const eventsData = data || []
+            const eventIds = eventsData.map(e => e.id)
+
+            let participantsMap: Record<string, string[]> = {}
+            if (eventIds.length > 0) {
+                const { data: participantsData } = await supabase
+                    .from("event_participants")
+                    .select("event_id, user_id")
+                    .in("event_id", eventIds)
+
+                if (participantsData) {
+                    for (const p of participantsData) {
+                        if (!participantsMap[p.event_id]) {
+                            participantsMap[p.event_id] = []
+                        }
+                        participantsMap[p.event_id].push(p.user_id)
+                    }
+                }
+            }
+
+            const eventsWithParticipants: EventWithParticipants[] = eventsData.map(e => ({
+                ...e,
+                participant_ids: participantsMap[e.id] || []
+            }))
+
+            setEvents(eventsWithParticipants)
         } catch (error: any) {
             console.error("Error fetching events:", error)
             setError("Error al cargar eventos: " + (error.message || "Error desconocido"))
@@ -81,12 +116,65 @@ export default function AgendaPage() {
         }
     }
 
-    const openCreateModal = () => {
+    // Filter private events: only show if user is creator or participant
+    const visibleEvents = useMemo(() => {
+        if (!profile) return []
+        return events.filter(event => {
+            // Public events are visible to everyone
+            if (event.is_public) return true
+            // Private events: visible only if user is creator or participant
+            if (event.created_by === profile.id) return true
+            if (event.participant_ids.includes(profile.id)) return true
+            // Private events with NO participants (only creator) — creator already handled above
+            return false
+        })
+    }, [events, profile])
+
+    // Calendar grid calculation
+    const calendarDays = useMemo(() => {
+        const monthStart = startOfMonth(currentMonth)
+        const monthEnd = endOfMonth(currentMonth)
+        const calendarStart = startOfWeek(monthStart, { weekStartsOn: 1 })
+        const calendarEnd = endOfWeek(monthEnd, { weekStartsOn: 1 })
+
+        const days: Date[] = []
+        let day = calendarStart
+        while (day <= calendarEnd) {
+            days.push(day)
+            day = addDays(day, 1)
+        }
+        return days
+    }, [currentMonth])
+
+    // Map events to dates
+    const eventsByDate = useMemo(() => {
+        const map: Record<string, EventWithParticipants[]> = {}
+        for (const event of visibleEvents) {
+            const dateKey = event.event_date
+            if (!map[dateKey]) map[dateKey] = []
+            map[dateKey].push(event)
+        }
+        // Sort events within each day by time
+        for (const key of Object.keys(map)) {
+            map[key].sort((a, b) => {
+                // Events with time come first, sorted chronologically
+                if (a.event_time && b.event_time) return a.event_time.localeCompare(b.event_time)
+                if (a.event_time && !b.event_time) return -1
+                if (!a.event_time && b.event_time) return 1
+                return 0
+            })
+        }
+        return map
+    }, [visibleEvents])
+
+    const today = new Date()
+
+    const openCreateModal = (date?: Date) => {
         setEditingEvent(null)
         setFormData({
             title: "",
             description: "",
-            event_date: format(new Date(), "yyyy-MM-dd"),
+            event_date: date ? format(date, "yyyy-MM-dd") : format(new Date(), "yyyy-MM-dd"),
             event_time: "",
             is_public: isAdmin,
             recurrence: "once",
@@ -128,7 +216,6 @@ export default function AgendaPage() {
             let eventId = editingEvent?.id
 
             if (editingEvent) {
-                // Update existing event
                 const { error } = await supabase
                     .from("events")
                     .update({
@@ -144,7 +231,6 @@ export default function AgendaPage() {
 
                 if (error) throw error
             } else {
-                // Create new event
                 const { data, error } = await supabase.from("events").insert({
                     title: formData.title,
                     description: formData.description || null,
@@ -163,10 +249,8 @@ export default function AgendaPage() {
 
             // Update participants
             if (eventId) {
-                // Delete existing participants
                 await supabase.from("event_participants").delete().eq("event_id", eventId)
 
-                // Insert new participants
                 if (formData.participant_ids.length > 0) {
                     const participantsData = formData.participant_ids.map(uid => ({
                         event_id: eventId!,
@@ -202,10 +286,29 @@ export default function AgendaPage() {
         }
     }
 
-    if (loading) return <div className="p-8">Cargando agenda...</div>
+    const goToPreviousMonth = () => setCurrentMonth(prev => subMonths(prev, 1))
+    const goToNextMonth = () => setCurrentMonth(prev => addMonths(prev, 1))
+    const goToToday = () => setCurrentMonth(new Date())
+
+    // Events for the selected day panel
+    const selectedDayEvents = useMemo(() => {
+        if (!selectedDay) return []
+        const dateKey = format(selectedDay, "yyyy-MM-dd")
+        return eventsByDate[dateKey] || []
+    }, [selectedDay, eventsByDate])
+
+    if (loading) return (
+        <div className="flex items-center justify-center h-96">
+            <div className="flex flex-col items-center gap-3">
+                <div className="h-8 w-8 animate-spin rounded-full border-4 border-indigo-500 border-t-transparent" />
+                <span className="text-slate-400 text-sm">Cargando agenda...</span>
+            </div>
+        </div>
+    )
 
     return (
         <div className="space-y-6">
+            {/* Header */}
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                     <h1 className="text-2xl font-bold dark:text-white">Agenda</h1>
@@ -231,8 +334,8 @@ export default function AgendaPage() {
                     </select>
 
                     <button
-                        onClick={openCreateModal}
-                        className="flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
+                        onClick={() => openCreateModal()}
+                        className="flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 transition-colors"
                     >
                         <Plus className="h-4 w-4" />
                         Nuevo Evento
@@ -240,92 +343,259 @@ export default function AgendaPage() {
                 </div>
             </div>
 
-            {/* Events List */}
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {events.map((event) => (
-                    <div
-                        key={event.id}
-                        className="group relative rounded-xl border bg-white p-5 shadow-sm transition-all hover:shadow-md dark:bg-slate-900 dark:border-slate-800"
+            {/* Calendar Navigation */}
+            <div className="flex items-center justify-between rounded-xl border bg-white dark:bg-slate-900 dark:border-slate-800 p-4">
+                <div className="flex items-center gap-3">
+                    <button
+                        onClick={goToPreviousMonth}
+                        className="rounded-lg p-2 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-slate-600 dark:text-slate-400"
                     >
-                        <div className="mb-3 flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                                <span
-                                    className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium ${event.is_public
-                                        ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                                        : "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400"
-                                        }`}
-                                >
-                                    {event.is_public ? (
-                                        <>
-                                            <Globe className="h-3 w-3" /> Público
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Lock className="h-3 w-3" /> Privado
-                                        </>
-                                    )}
-                                </span>
-                                {event.recurrence && event.recurrence !== "once" && (
-                                    <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-1 text-xs font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
-                                        <RefreshCw className="h-3 w-3" />
-                                        {recurrenceLabels[event.recurrence as RecurrenceType]}
-                                    </span>
-                                )}
-                            </div>
-
-                            {event.created_by === profile?.id && (
-                                <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-                                    <button
-                                        onClick={() => openEditModal(event)}
-                                        className="text-slate-400 hover:text-blue-500"
-                                        title="Editar"
-                                    >
-                                        <Pencil className="h-4 w-4" />
-                                    </button>
-                                    <button
-                                        onClick={() => handleDelete(event.id)}
-                                        className="text-slate-400 hover:text-red-500"
-                                        title="Eliminar"
-                                    >
-                                        <Trash2 className="h-4 w-4" />
-                                    </button>
-                                </div>
-                            )}
-                        </div>
-
-                        <h3 className="mb-2 font-semibold text-slate-900 dark:text-white">
-                            {event.title}
-                        </h3>
-
-                        {event.description && (
-                            <p className="mb-3 text-sm text-slate-500 line-clamp-2 dark:text-slate-400">
-                                {event.description}
-                            </p>
-                        )}
-
-                        <div className="flex items-center gap-4 text-xs text-slate-500 dark:text-slate-400">
-                            <div className="flex items-center gap-1">
-                                <Calendar className="h-3 w-3" />
-                                {format(new Date(event.event_date + 'T12:00:00'), "d 'de' MMMM", { locale: es })}
-                            </div>
-                            {event.event_time && (
-                                <div className="flex items-center gap-1">
-                                    <Clock className="h-3 w-3" />
-                                    {event.event_time.slice(0, 5)}
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                ))}
-
-                {events.length === 0 && (
-                    <div className="col-span-full py-10 text-center text-slate-500">
-                        No hay eventos programados
-                    </div>
-                )}
+                        <ChevronLeft className="h-5 w-5" />
+                    </button>
+                    <h2 className="text-lg font-semibold dark:text-white min-w-[200px] text-center capitalize">
+                        {format(currentMonth, "MMMM yyyy", { locale: es })}
+                    </h2>
+                    <button
+                        onClick={goToNextMonth}
+                        className="rounded-lg p-2 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-slate-600 dark:text-slate-400"
+                    >
+                        <ChevronRight className="h-5 w-5" />
+                    </button>
+                </div>
+                <button
+                    onClick={goToToday}
+                    className="rounded-lg border dark:border-slate-700 px-3 py-1.5 text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                >
+                    Hoy
+                </button>
             </div>
 
-            {/* Modal */}
+            {/* Calendar + Side Panel */}
+            <div className="flex gap-6 flex-col lg:flex-row">
+                {/* Calendar Grid */}
+                <div className="flex-1 rounded-xl border bg-white dark:bg-slate-900 dark:border-slate-800 overflow-hidden">
+                    {/* Weekday Headers */}
+                    <div className="grid grid-cols-7 border-b dark:border-slate-800">
+                        {WEEKDAY_NAMES.map((name) => (
+                            <div
+                                key={name}
+                                className="py-3 text-center text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400"
+                            >
+                                {name}
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Days Grid */}
+                    <div className="grid grid-cols-7">
+                        {calendarDays.map((day, idx) => {
+                            const dateKey = format(day, "yyyy-MM-dd")
+                            const dayEvents = eventsByDate[dateKey] || []
+                            const isCurrentMonth = isSameMonth(day, currentMonth)
+                            const isToday = isSameDay(day, today)
+                            const isSelected = selectedDay ? isSameDay(day, selectedDay) : false
+                            const hasEvents = dayEvents.length > 0
+
+                            return (
+                                <div
+                                    key={idx}
+                                    onClick={() => setSelectedDay(day)}
+                                    className={`
+                                        min-h-[100px] border-b border-r dark:border-slate-800 p-1.5 cursor-pointer transition-all
+                                        ${!isCurrentMonth ? "bg-slate-50/50 dark:bg-slate-950/30" : ""}
+                                        ${isSelected ? "bg-indigo-50 dark:bg-indigo-950/30 ring-2 ring-inset ring-indigo-500" : "hover:bg-slate-50 dark:hover:bg-slate-800/50"}
+                                    `}
+                                >
+                                    {/* Day number */}
+                                    <div className="flex items-center justify-between mb-1">
+                                        <span
+                                            className={`
+                                                inline-flex items-center justify-center h-7 w-7 rounded-full text-sm font-medium
+                                                ${isToday ? "bg-indigo-600 text-white" : ""}
+                                                ${!isToday && isCurrentMonth ? "text-slate-700 dark:text-slate-300" : ""}
+                                                ${!isToday && !isCurrentMonth ? "text-slate-400 dark:text-slate-600" : ""}
+                                            `}
+                                        >
+                                            {format(day, "d")}
+                                        </span>
+                                        {hasEvents && (
+                                            <span className="text-[10px] font-medium text-indigo-500 dark:text-indigo-400">
+                                                {dayEvents.length}
+                                            </span>
+                                        )}
+                                    </div>
+
+                                    {/* Event pills */}
+                                    <div className="space-y-0.5">
+                                        {dayEvents.slice(0, 3).map((event) => (
+                                            <div
+                                                key={event.id}
+                                                className={`
+                                                    rounded px-1.5 py-0.5 text-[10px] font-medium truncate leading-tight
+                                                    ${event.is_public
+                                                        ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400"
+                                                        : "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-400"
+                                                    }
+                                                `}
+                                                title={`${event.event_time ? event.event_time.slice(0, 5) + " - " : ""}${event.title}`}
+                                            >
+                                                {event.event_time && (
+                                                    <span className="opacity-75">{event.event_time.slice(0, 5)} </span>
+                                                )}
+                                                {event.title}
+                                            </div>
+                                        ))}
+                                        {dayEvents.length > 3 && (
+                                            <div className="text-[10px] text-slate-500 dark:text-slate-400 pl-1.5 font-medium">
+                                                +{dayEvents.length - 3} más
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            )
+                        })}
+                    </div>
+                </div>
+
+                {/* Side Panel - Selected Day Details */}
+                <div className="w-full lg:w-80 shrink-0">
+                    <div className="rounded-xl border bg-white dark:bg-slate-900 dark:border-slate-800 overflow-hidden sticky top-4">
+                        <div className="p-4 border-b dark:border-slate-800 bg-gradient-to-r from-indigo-500/10 to-purple-500/10">
+                            <h3 className="font-semibold dark:text-white">
+                                {selectedDay
+                                    ? format(selectedDay, "EEEE d 'de' MMMM", { locale: es })
+                                    : "Selecciona un día"
+                                }
+                            </h3>
+                            {selectedDay && (
+                                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                                    {selectedDayEvents.length === 0 ? "Sin eventos" : `${selectedDayEvents.length} evento${selectedDayEvents.length > 1 ? "s" : ""}`}
+                                </p>
+                            )}
+                        </div>
+
+                        <div className="p-3 max-h-[500px] overflow-y-auto custom-scrollbar">
+                            {!selectedDay && (
+                                <p className="text-sm text-slate-500 dark:text-slate-400 text-center py-8">
+                                    Haz clic en un día del calendario para ver sus eventos
+                                </p>
+                            )}
+
+                            {selectedDay && selectedDayEvents.length === 0 && (
+                                <div className="text-center py-8">
+                                    <p className="text-sm text-slate-500 dark:text-slate-400 mb-3">
+                                        No hay eventos este día
+                                    </p>
+                                    <button
+                                        onClick={() => openCreateModal(selectedDay)}
+                                        className="text-sm text-indigo-500 hover:text-indigo-600 font-medium flex items-center gap-1 mx-auto"
+                                    >
+                                        <Plus className="h-4 w-4" />
+                                        Agregar evento
+                                    </button>
+                                </div>
+                            )}
+
+                            {selectedDay && selectedDayEvents.length > 0 && (
+                                <div className="space-y-2">
+                                    {selectedDayEvents.map((event) => (
+                                        <div
+                                            key={event.id}
+                                            className={`
+                                                group relative rounded-lg border p-3 transition-all hover:shadow-md
+                                                ${event.is_public
+                                                    ? "border-emerald-200 dark:border-emerald-800/50 bg-emerald-50/50 dark:bg-emerald-950/20"
+                                                    : "border-purple-200 dark:border-purple-800/50 bg-purple-50/50 dark:bg-purple-950/20"
+                                                }
+                                            `}
+                                        >
+                                            {/* Top row: badges + actions */}
+                                            <div className="flex items-center justify-between mb-1.5">
+                                                <div className="flex items-center gap-1.5">
+                                                    <span
+                                                        className={`inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-medium ${event.is_public
+                                                            ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-400"
+                                                            : "bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-400"
+                                                            }`}
+                                                    >
+                                                        {event.is_public ? (
+                                                            <><Globe className="h-2.5 w-2.5" /> Público</>
+                                                        ) : (
+                                                            <><Lock className="h-2.5 w-2.5" /> Privado</>
+                                                        )}
+                                                    </span>
+                                                    {event.recurrence && event.recurrence !== "once" && (
+                                                        <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-1.5 py-0.5 text-[10px] font-medium text-blue-700 dark:bg-blue-900/50 dark:text-blue-400">
+                                                            <RefreshCw className="h-2.5 w-2.5" />
+                                                            {recurrenceLabels[event.recurrence as RecurrenceType]}
+                                                        </span>
+                                                    )}
+                                                </div>
+
+                                                {event.created_by === profile?.id && (
+                                                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        <button
+                                                            onClick={(e) => { e.stopPropagation(); openEditModal(event); }}
+                                                            className="text-slate-400 hover:text-blue-500 transition-colors"
+                                                            title="Editar"
+                                                        >
+                                                            <Pencil className="h-3.5 w-3.5" />
+                                                        </button>
+                                                        <button
+                                                            onClick={(e) => { e.stopPropagation(); handleDelete(event.id); }}
+                                                            className="text-slate-400 hover:text-red-500 transition-colors"
+                                                            title="Eliminar"
+                                                        >
+                                                            <Trash2 className="h-3.5 w-3.5" />
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            {/* Title */}
+                                            <h4 className="font-semibold text-sm text-slate-900 dark:text-white">
+                                                {event.title}
+                                            </h4>
+
+                                            {/* Description */}
+                                            {event.description && (
+                                                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 line-clamp-2">
+                                                    {event.description}
+                                                </p>
+                                            )}
+
+                                            {/* Time */}
+                                            {event.event_time && (
+                                                <div className="flex items-center gap-1 mt-2 text-xs text-slate-500 dark:text-slate-400">
+                                                    <Clock className="h-3 w-3" />
+                                                    {event.event_time.slice(0, 5)}
+                                                </div>
+                                            )}
+
+                                            {/* Participants indicator */}
+                                            {event.participant_ids.length > 0 && (
+                                                <div className="flex items-center gap-1 mt-1.5 text-xs text-slate-500 dark:text-slate-400">
+                                                    <Users className="h-3 w-3" />
+                                                    {event.participant_ids.length} participante{event.participant_ids.length > 1 ? "s" : ""}
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
+
+                                    <button
+                                        onClick={() => openCreateModal(selectedDay)}
+                                        className="w-full mt-2 rounded-lg border-2 border-dashed border-slate-200 dark:border-slate-700 p-2 text-sm text-slate-500 dark:text-slate-400 hover:border-indigo-400 hover:text-indigo-500 dark:hover:border-indigo-500 dark:hover:text-indigo-400 transition-colors flex items-center justify-center gap-1"
+                                    >
+                                        <Plus className="h-4 w-4" />
+                                        Agregar evento
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             {/* Modal */}
             {showModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">

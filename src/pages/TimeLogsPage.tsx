@@ -599,12 +599,12 @@ export default function TimeLogsPage() {
                                 <label className="block text-sm font-medium text-slate-400 mb-1">Horas</label>
                                 <input
                                     type="number"
-                                    step="0.5"
+                                    step="0.01"
                                     required
                                     value={formData.hours_worked}
                                     onChange={(e) => setFormData({ ...formData, hours_worked: e.target.value })}
                                     className="w-full rounded-lg border border-slate-700 bg-slate-800 p-2.5 text-white outline-none focus:border-blue-500"
-                                    placeholder="0.0"
+                                    placeholder="0.00"
                                 />
                             </div>
 
@@ -670,13 +670,13 @@ export default function TimeLogsPage() {
                                 </label>
                                 <input
                                     type="number"
-                                    step="0.5"
+                                    step="0.01"
                                     max={monthStats.availableToSave}
-                                    min="0.5"
+                                    min="0.01"
                                     value={bankHoursToSave}
                                     onChange={(e) => setBankHoursToSave(e.target.value)}
                                     className="w-full rounded-lg border border-slate-700 bg-slate-800 p-2.5 text-white outline-none focus:border-green-500"
-                                    placeholder="0.0"
+                                    placeholder="0.00"
                                 />
                             </div>
 

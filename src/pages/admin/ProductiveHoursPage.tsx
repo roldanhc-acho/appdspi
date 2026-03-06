@@ -284,7 +284,7 @@ export default function ProductiveHoursPage() {
                                         type="number"
                                         required
                                         min="0.5"
-                                        step="0.5"
+                                        step="0.01"
                                         value={formData.hours}
                                         onChange={(e) => setFormData({ ...formData, hours: parseFloat(e.target.value) })}
                                         className="w-full rounded-xl border border-zinc-800 bg-zinc-900 p-3 text-white focus:outline-none focus:ring-2 focus:ring-primary/50"
