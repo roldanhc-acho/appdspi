@@ -130,12 +130,15 @@ export function TaskGantt({ tasks, onDateChange }: TaskGanttProps) {
             return acc
         }, {} as Record<string, Task[]>)
 
+        const safeDate = (dString: string | null | undefined, fallback: string | number | Date) => 
+            dString ? new Date(`${dString}T12:00:00`) : new Date(fallback)
+
         // Create a list of mother tasks with their effective start dates for sorting
         const motherTasksWithDates = motherTasks.map(mother => {
             const children = subtasksByParent[mother.id] || []
-            let start = mother.start_date ? new Date(mother.start_date) : new Date(mother.created_at || Date.now())
+            let start = safeDate(mother.start_date, mother.created_at || Date.now())
             if (children.length > 0) {
-                const childStarts = children.map(c => c.start_date ? new Date(c.start_date).getTime() : new Date(c.created_at || Date.now()).getTime())
+                const childStarts = children.map(c => safeDate(c.start_date, c.created_at || Date.now()).getTime())
                 start = new Date(Math.min(...childStarts))
             }
             return { mother, start }
@@ -151,21 +154,21 @@ export function TaskGantt({ tasks, onDateChange }: TaskGanttProps) {
 
             // Sort children by start date
             children.sort((a, b) => {
-                const aStart = a.start_date ? new Date(a.start_date).getTime() : new Date(a.created_at || Date.now()).getTime()
-                const bStart = b.due_date ? new Date(b.due_date).getTime() : new Date(b.created_at || Date.now()).getTime()
+                const aStart = safeDate(a.start_date, a.created_at || Date.now()).getTime()
+                const bStart = safeDate(b.due_date, b.created_at || Date.now()).getTime()
                 return aStart - bStart
             })
 
             const isCollapsed = collapsedParents.has(mother.id)
 
             // Calculate mother dates based on children if they exist
-            let motherStart = mother.start_date ? new Date(mother.start_date) : new Date(mother.created_at || Date.now())
-            let motherEnd = mother.due_date ? new Date(mother.due_date) : new Date(motherStart.getTime() + 86400000)
+            let motherStart = safeDate(mother.start_date, mother.created_at || Date.now())
+            let motherEnd = safeDate(mother.due_date, motherStart.getTime() + 86400000)
 
             if (children.length > 0) {
                 const childDates = children.map(c => ({
-                    start: c.start_date ? new Date(c.start_date) : new Date(c.created_at || Date.now()),
-                    end: c.due_date ? new Date(c.due_date) : new Date((c.start_date ? new Date(c.start_date) : new Date()).getTime() + 86400000)
+                    start: safeDate(c.start_date, c.created_at || Date.now()),
+                    end: safeDate(c.due_date, safeDate(c.start_date, new Date()).getTime() + 86400000)
                 }))
                 motherStart = new Date(Math.min(...childDates.map(d => d.start.getTime())))
                 motherEnd = new Date(Math.max(...childDates.map(d => d.end.getTime())))
@@ -193,8 +196,8 @@ export function TaskGantt({ tasks, onDateChange }: TaskGanttProps) {
             // Add Children
             if (!isCollapsed) {
                 children.forEach(child => {
-                    const cStart = child.start_date ? new Date(child.start_date) : new Date(child.created_at || Date.now())
-                    const cEnd = child.due_date ? new Date(child.due_date) : new Date(cStart.getTime() + 86400000)
+                    const cStart = safeDate(child.start_date, child.created_at || Date.now())
+                    const cEnd = safeDate(child.due_date, cStart.getTime() + 86400000)
 
                     let color = '#E2E8F0'
                     if (child.status === 'in_progress') color = '#3B82F6'

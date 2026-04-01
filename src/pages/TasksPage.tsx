@@ -517,7 +517,7 @@ export default function TasksPage() {
                                         </span>
                                     </td>
                                     <td className="px-6 py-4 text-slate-500 dark:text-slate-400 text-xs">
-                                        {task.due_date ? new Date(task.due_date).toLocaleDateString() : "-"}
+                                        {task.due_date ? new Date(`${task.due_date}T12:00:00`).toLocaleDateString() : "-"}
                                     </td>
                                     <td className="px-6 py-4 text-right">
                                         <div className="flex justify-end gap-2">

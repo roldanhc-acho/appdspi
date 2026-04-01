@@ -196,7 +196,7 @@ export default function ProjectsPage() {
                             {project.start_date && (
                                 <div className="flex items-center gap-1">
                                     <Calendar className="h-3 w-3" />
-                                    <span>{new Date(project.start_date).toLocaleDateString()}</span>
+                                    <span>{new Date(`${project.start_date}T12:00:00`).toLocaleDateString()}</span>
                                 </div>
                             )}
 
