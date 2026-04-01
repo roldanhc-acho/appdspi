@@ -129,8 +129,8 @@ export default function AbsencePage() {
                                 <td className="px-4 py-3 capitalize">{absence.type}</td>
                                 <td className="px-4 py-3 text-slate-500">
                                     <div className="flex flex-col text-xs">
-                                        <span>{new Date(absence.start_date).toLocaleDateString()}</span>
-                                        <span>to {new Date(absence.end_date).toLocaleDateString()}</span>
+                                        <span>{new Date(`${absence.start_date}T12:00:00`).toLocaleDateString()}</span>
+                                        <span>to {new Date(`${absence.end_date}T12:00:00`).toLocaleDateString()}</span>
                                     </div>
                                 </td>
                                 <td className="px-4 py-3 text-slate-500 text-center">
