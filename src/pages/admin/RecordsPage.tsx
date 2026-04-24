@@ -227,7 +227,36 @@ export default function RecordsPage() {
             setTotalRecords(count || 0)
             setHasMore((count || 0) > page * pageSize)
 
-            const total = (data as any[]).reduce((sum, item) => sum + (item.hours_worked || 0), 0)
+            // To get the accurate total hours of ALL records matching the filter (not just the current page)
+            // we perform a separate sum query. This ensures the "Total" indicator is correct.
+            let sumQuery = supabase
+                .from("time_logs")
+                .select("hours_worked")
+
+            if (startDate) sumQuery = sumQuery.gte("date", startDate)
+            if (endDate) sumQuery = sumQuery.lte("date", endDate)
+            if (selectedUserId !== "all") sumQuery = sumQuery.eq("user_id", selectedUserId)
+            
+            if (selectedTaskId !== "all") {
+                sumQuery = sumQuery.eq("task_id", selectedTaskId)
+            } else if (selectedClientId !== "all") {
+                // Use the same task IDs we already found
+                const { data: directTasks } = await supabase.from('tasks').select('id').eq('client_id', selectedClientId)
+                const { data: projects } = await supabase.from('projects').select('id').eq('client_id', selectedClientId)
+                
+                let allIds: string[] = []
+                if (directTasks) allIds = [...allIds, ...directTasks.map(t => t.id)]
+                if (projects && projects.length > 0) {
+                    const { data: pTasks } = await supabase.from('tasks').select('id').in('project_id', projects.map(p => p.id))
+                    if (pTasks) allIds = [...allIds, ...pTasks.map(t => t.id)]
+                }
+                
+                if (allIds.length > 0) sumQuery = sumQuery.in('task_id', allIds)
+                else sumQuery = sumQuery.eq('id', '00000000-0000-0000-0000-000000000000')
+            }
+
+            const { data: allLogsForSum } = await sumQuery
+            const total = (allLogsForSum || []).reduce((sum, item) => sum + Number(item.hours_worked || 0), 0)
             setTotalHours(total)
 
         } catch (err) {
@@ -384,7 +413,7 @@ export default function RecordsPage() {
                 <div className="text-sm text-slate-400">Mostrando <span className="text-white font-medium">{logs.length}</span> de <span className="text-white font-medium">{totalRecords}</span>.</div>
                 <div className="bg-indigo-500/10 border border-indigo-500/20 px-4 py-2 rounded-lg">
                     <span className="text-sm font-medium text-indigo-300">Total: </span>
-                    <span className="text-lg font-bold text-white ml-2">{totalHours.toFixed(2)} hrs</span>
+                    <span className="text-lg font-bold text-white ml-2">{totalHours.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} horas</span>
                 </div>
             </div>
 
