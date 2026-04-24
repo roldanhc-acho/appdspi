@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react"
 import { supabase } from "@/lib/supabase"
 import { format } from "date-fns"
-import { Calendar, User, Download, ChevronLeft, ChevronRight, FileText, Building2, Edit2, Trash2, X, Save, CheckSquare } from "lucide-react"
+import { Calendar, User, Download, ChevronLeft, ChevronRight, FileText, Building2, Edit2, Trash2, X, Save, CheckSquare, Loader2 } from "lucide-react"
 
 // Tipos
 type Profile = { id: string; full_name: string | null }
@@ -68,6 +68,7 @@ export default function RecordsPage() {
         notes: ""
     })
     const [isSaving, setIsSaving] = useState(false)
+    const [isExporting, setIsExporting] = useState(false)
 
     // 1. Cargar catálogos iniciales
     useEffect(() => {
@@ -266,30 +267,108 @@ export default function RecordsPage() {
         }
     }
 
-    const downloadCSV = () => {
-        const csvHeader = ["Fecha", "Empleado", "Cliente", "Proyecto", "Tarea", "Horas", "Notas"]
-        const csvRows = logs.map(log => {
-            const clientName = log.task?.client_direct?.name || log.task?.project?.client?.name || "-"
-            const projectName = log.task?.project?.name || "General"
+    const downloadCSV = async () => {
+        setIsExporting(true)
+        try {
+            // Realizamos la misma consulta que fetchLogs pero sin paginación (range)
+            let query = supabase
+                .from("time_logs")
+                .select(`
+                    id,
+                    date,
+                    hours_worked,
+                    notes,
+                    user:profiles!time_logs_user_id_fkey(full_name),
+                    task:tasks!time_logs_task_id_fkey(
+                        id,
+                        title,
+                        project:projects(
+                            id,
+                            name,
+                            client:clients(id, name)
+                        ),
+                        client_direct:clients(id, name)
+                    )
+                `)
+                .order("date", { ascending: false })
 
-            return [
-                log.date, // El valor ya viene como YYYY-MM-DD, no necesitamos formatearlo para evitar líos de zona horaria en CSV
-                log.user?.full_name || "Sin Asignar",
-                clientName,
-                projectName,
-                log.task?.title || "Sin Tarea",
-                log.hours_worked.toFixed(2),
-                (log.notes || "").replace(/,/g, " ")
-            ]
-        })
+            if (startDate) query = query.gte("date", startDate)
+            if (endDate) query = query.lte("date", endDate)
+            if (selectedUserId !== "all") query = query.eq("user_id", selectedUserId)
 
-        const csvContent = [csvHeader, ...csvRows].map(e => e.join(",")).join("\n")
-        const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" })
-        const url = URL.createObjectURL(blob)
-        const link = document.createElement("a")
-        link.href = url
-        link.download = `reporte_horas_${format(new Date(), 'yyyy-MM-dd')}.csv`
-        link.click()
+            if (selectedTaskId !== "all") {
+                query = query.eq("task_id", selectedTaskId)
+            } else if (selectedClientId !== "all") {
+                // Obtenemos todos los IDs de tareas del cliente (mismo filtro que fetchLogs)
+                const { data: directTaskIds } = await supabase
+                    .from('tasks')
+                    .select('id')
+                    .eq('client_id', selectedClientId)
+
+                const { data: projectIds } = await supabase
+                    .from('projects')
+                    .select('id')
+                    .eq('client_id', selectedClientId)
+
+                let allTargetTaskIds: string[] = []
+                if (directTaskIds) allTargetTaskIds = [...allTargetTaskIds, ...directTaskIds.map(t => t.id)]
+
+                if (projectIds && projectIds.length > 0) {
+                    const pIds = projectIds.map(p => p.id)
+                    const { data: projectTaskIds } = await supabase
+                        .from('tasks')
+                        .select('id')
+                        .in('project_id', pIds)
+
+                    if (projectTaskIds) {
+                        allTargetTaskIds = [...allTargetTaskIds, ...projectTaskIds.map(t => t.id)]
+                    }
+                }
+
+                if (allTargetTaskIds.length > 0) {
+                    query = query.in('task_id', allTargetTaskIds)
+                } else {
+                    query = query.eq('id', '00000000-0000-0000-0000-000000000000')
+                }
+            }
+
+            const { data: allLogs, error } = await query
+            if (error) throw error
+
+            if (!allLogs || allLogs.length === 0) {
+                alert("No hay datos para exportar")
+                return
+            }
+
+            const csvHeader = ["Fecha", "Empleado", "Cliente", "Proyecto", "Tarea", "Horas", "Notas"]
+            const csvRows = (allLogs as any[]).map(log => {
+                const clientName = log.task?.client_direct?.name || log.task?.project?.client?.name || "-"
+                const projectName = log.task?.project?.name || "General"
+
+                return [
+                    log.date,
+                    log.user?.full_name || "Sin Asignar",
+                    clientName,
+                    projectName,
+                    log.task?.title || "Sin Tarea",
+                    log.hours_worked.toFixed(2),
+                    (log.notes || "").replace(/,/g, " ")
+                ]
+            })
+
+            const csvContent = [csvHeader, ...csvRows].map(e => e.join(",")).join("\n")
+            const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" })
+            const url = URL.createObjectURL(blob)
+            const link = document.createElement("a")
+            link.href = url
+            link.download = `reporte_completo_actividades_${format(new Date(), 'yyyy-MM-dd')}.csv`
+            link.click()
+        } catch (err) {
+            console.error("Error exportando CSV:", err)
+            alert("Hubo un error al generar el reporte completo.")
+        } finally {
+            setIsExporting(false)
+        }
     }
 
     // --- Lógica de Edición ---
@@ -350,10 +429,18 @@ export default function RecordsPage() {
                 </div>
                 <button
                     onClick={downloadCSV}
-                    disabled={logs.length === 0}
+                    disabled={logs.length === 0 || isExporting}
                     className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-700 disabled:text-slate-500 text-white px-5 py-2.5 rounded-xl font-medium transition-all shadow-lg hover:shadow-indigo-500/25 active:scale-95"
                 >
-                    <Download className="w-4 h-4" /> Exportar CSV
+                    {isExporting ? (
+                        <>
+                            <Loader2 className="w-4 h-4 animate-spin" /> Exportando...
+                        </>
+                    ) : (
+                        <>
+                            <Download className="w-4 h-4" /> Exportar CSV
+                        </>
+                    )}
                 </button>
             </div>
 
