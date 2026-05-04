@@ -115,7 +115,7 @@ export default function MonthlyReportPage() {
                     hoursRegistered,
                     absenceHours,
                     productivityHours,
-                    bankHours
+                    bankHours: bankHoursThisMonth
                 }
             })
 

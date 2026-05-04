@@ -10,7 +10,8 @@ import {
     Calendar,
     TrendingUp,
     FileText,
-    BarChart3
+    BarChart3,
+    Database
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -122,6 +123,12 @@ export function Sidebar() {
                                 label="Resumen Mensual"
                                 to="/admin/monthly-report"
                                 active={location.pathname.startsWith("/admin/monthly-report")}
+                            />
+                            <SidebarItem
+                                icon={Database}
+                                label="Acumulado Banco"
+                                to="/admin/hour-bank"
+                                active={location.pathname.startsWith("/admin/hour-bank")}
                             />
                             <SidebarItem
                                 icon={Users}

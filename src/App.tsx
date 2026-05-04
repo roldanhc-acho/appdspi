@@ -14,6 +14,7 @@ import AgendaPage from "@/pages/AgendaPage"
 import ProductiveHoursPage from "@/pages/admin/ProductiveHoursPage"
 import RecordsPage from "@/pages/admin/RecordsPage"
 import MonthlyReportPage from "@/pages/admin/MonthlyReportPage"
+import HourBankReportPage from "@/pages/admin/HourBankReportPage"
 
 // Placeholder components
 import DashboardPage from "@/pages/DashboardPage"
@@ -99,6 +100,14 @@ function App() {
                 element={
                   <ProtectedRoute adminOnly>
                     <MonthlyReportPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="admin/hour-bank"
+                element={
+                  <ProtectedRoute adminOnly>
+                    <HourBankReportPage />
                   </ProtectedRoute>
                 }
               />
