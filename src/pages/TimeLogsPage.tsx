@@ -15,7 +15,7 @@ import {
     isSameMonth
 } from "date-fns"
 import { es } from "date-fns/locale"
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, CheckCircle, Trash2, PiggyBank } from "lucide-react"
+import { ChevronLeft, ChevronRight, ChevronDown, Calendar as CalendarIcon, CheckCircle, Trash2, PiggyBank, Plus, Pencil, Clock } from "lucide-react"
 import { isNonWorkingDay } from "@/utils/holidays"
 
 type TimeLog = Database["public"]["Tables"]["time_logs"]["Row"] & {
@@ -45,6 +45,7 @@ export default function TimeLogsPage() {
     const [showModal, setShowModal] = useState(false)
     const [showBankModal, setShowBankModal] = useState(false)
     const [bankHoursToSave, setBankHoursToSave] = useState("")
+    const [expandedDay, setExpandedDay] = useState<string | null>(null)
 
     const [formData, setFormData] = useState({
         id: "",
@@ -452,62 +453,170 @@ export default function TimeLogsPage() {
 
                 {/* Days Grid */}
                 <div className="grid grid-cols-7 gap-1">
-                    {monthDays.map(day => {
-                        const { loggedHours, target, isWknd, isHoliday, isAbsenceJustified, logs: dayLogs } = getDailyStats(day)
-                        const isToday = isSameDay(day, new Date())
-                        const isCurrentMonth = isSameMonth(day, currentDate)
+                    {(() => {
+                        const weeks: Date[][] = []
+                        for (let i = 0; i < monthDays.length; i += 7) {
+                            weeks.push(monthDays.slice(i, i + 7))
+                        }
 
-                        return (
-                            <div
-                                key={day.toISOString()}
-                                className={`relative flex flex-col rounded-lg border p-2 min-h-[90px] transition-colors cursor-pointer hover:border-blue-500/50
-                                    ${isToday ? 'border-blue-500 bg-blue-500/10' : 'border-slate-800 bg-slate-800/50'}
-                                    ${!isCurrentMonth ? 'opacity-40' : ''}
-                                    ${isWknd ? 'border-l-2 border-l-red-500' : ''}
-                                    ${isHoliday ? 'border-l-2 border-l-orange-500' : ''}
-                                `}
-                                onClick={() => isCurrentMonth && handleOpenModal(format(day, 'yyyy-MM-dd'))}
-                            >
-                                <div className="flex items-start justify-between mb-1">
-                                    <p className={`text-sm font-bold 
-                                        ${isWknd ? 'text-red-400' : (isHoliday ? 'text-orange-400' : 'text-white')}
-                                    `}>
-                                        {format(day, 'd')}
-                                    </p>
-                                    {isCurrentMonth && (
-                                        <div className="text-right text-xs">
-                                            <span className="text-white font-medium">{loggedHours}</span>
-                                            <span className="text-slate-500">/{target}</span>
+                        return weeks.map((week, weekIdx) => {
+                            const expandedDayInWeek = week.find(day => format(day, 'yyyy-MM-dd') === expandedDay)
+                            const expandedDayStats = expandedDayInWeek ? getDailyStats(expandedDayInWeek) : null
+
+                            return (
+                                <div key={weekIdx} className="col-span-7">
+                                    {/* Week row */}
+                                    <div className="grid grid-cols-7 gap-1">
+                                        {week.map(day => {
+                                            const dateStr = format(day, 'yyyy-MM-dd')
+                                            const { loggedHours, target, isWknd, isHoliday, isAbsenceJustified, logs: dayLogs } = getDailyStats(day)
+                                            const isToday = isSameDay(day, new Date())
+                                            const isCurrentMonth = isSameMonth(day, currentDate)
+                                            const isExpanded = expandedDay === dateStr
+
+                                            return (
+                                                <div
+                                                    key={day.toISOString()}
+                                                    className={`relative flex flex-col rounded-lg border p-2 min-h-[90px] transition-all cursor-pointer hover:border-blue-500/50
+                                                        ${isExpanded ? 'border-blue-500 bg-blue-500/15 ring-1 ring-blue-500/30' : (isToday ? 'border-blue-500 bg-blue-500/10' : 'border-slate-800 bg-slate-800/50')}
+                                                        ${!isCurrentMonth ? 'opacity-40' : ''}
+                                                        ${isWknd ? 'border-l-2 border-l-red-500' : ''}
+                                                        ${isHoliday ? 'border-l-2 border-l-orange-500' : ''}
+                                                    `}
+                                                    onClick={() => {
+                                                        if (!isCurrentMonth) return
+                                                        setExpandedDay(isExpanded ? null : dateStr)
+                                                    }}
+                                                >
+                                                    <div className="flex items-start justify-between mb-1">
+                                                        <p className={`text-sm font-bold 
+                                                            ${isWknd ? 'text-red-400' : (isHoliday ? 'text-orange-400' : 'text-white')}
+                                                        `}>
+                                                            {format(day, 'd')}
+                                                        </p>
+                                                        {isCurrentMonth && (
+                                                            <div className="flex items-center gap-1">
+                                                                <div className="text-right text-xs">
+                                                                    <span className="text-white font-medium">{loggedHours}</span>
+                                                                    <span className="text-slate-500">/{target}</span>
+                                                                </div>
+                                                                {isExpanded && (
+                                                                    <ChevronDown className="h-3 w-3 text-blue-400" />
+                                                                )}
+                                                            </div>
+                                                        )}
+                                                    </div>
+
+                                                    {isCurrentMonth && (
+                                                        <div className="flex-1 space-y-0.5 overflow-hidden">
+                                                            {dayLogs.length > 0 ? (
+                                                                dayLogs.slice(0, 2).map(l => (
+                                                                    <div
+                                                                        key={l.id}
+                                                                        className="text-xs bg-slate-900/50 px-1 py-0.5 rounded truncate"
+                                                                    >
+                                                                        {l.tasks?.title?.slice(0, 15) || 'Sin tarea'}
+                                                                    </div>
+                                                                ))
+                                                            ) : isAbsenceJustified ? (
+                                                                <div className="flex items-center gap-1 text-xs text-green-400">
+                                                                    <CheckCircle className="h-3 w-3" />
+                                                                    <span>Justif.</span>
+                                                                </div>
+                                                            ) : null}
+                                                            {dayLogs.length > 2 && (
+                                                                <span className="text-xs text-slate-500">+{dayLogs.length - 2} más</span>
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )
+                                        })}
+                                    </div>
+
+                                    {/* Expanded Day Detail Panel */}
+                                    {expandedDayInWeek && expandedDayStats && (
+                                        <div className="col-span-7 mt-1 mb-2 rounded-xl border border-blue-500/30 bg-slate-800/80 p-4 animate-in slide-in-from-top-2 duration-200">
+                                            <div className="flex items-center justify-between mb-3">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="flex items-center gap-2">
+                                                        <CalendarIcon className="h-4 w-4 text-blue-400" />
+                                                        <h3 className="font-semibold text-white capitalize">
+                                                            {format(expandedDayInWeek, 'EEEE d MMMM', { locale: es })}
+                                                        </h3>
+                                                    </div>
+                                                    <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-slate-700/50 text-xs">
+                                                        <Clock className="h-3 w-3 text-slate-400" />
+                                                        <span className="text-white font-medium">{expandedDayStats.loggedHours}</span>
+                                                        <span className="text-slate-500">/ {expandedDayStats.target}h</span>
+                                                    </div>
+                                                </div>
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation()
+                                                        handleOpenModal(format(expandedDayInWeek, 'yyyy-MM-dd'))
+                                                    }}
+                                                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-xs font-medium text-white transition-colors"
+                                                >
+                                                    <Plus className="h-3.5 w-3.5" />
+                                                    Nuevo registro
+                                                </button>
+                                            </div>
+
+                                            {expandedDayStats.logs.length > 0 ? (
+                                                <div className="space-y-1.5">
+                                                    {expandedDayStats.logs.map(l => (
+                                                        <div
+                                                            key={l.id}
+                                                            className="flex items-center justify-between gap-3 rounded-lg border border-slate-700/50 bg-slate-900/60 px-3 py-2.5 group hover:border-slate-600 transition-colors"
+                                                        >
+                                                            <div className="flex-1 min-w-0">
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="text-sm font-medium text-white truncate">
+                                                                        {l.tasks?.title || 'Sin tarea'}
+                                                                    </span>
+                                                                    {l.tasks?.projects?.name && (
+                                                                        <span className="text-xs px-1.5 py-0.5 rounded bg-slate-700/50 text-slate-400 shrink-0">
+                                                                            {l.tasks.projects.name}
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                                {l.notes && (
+                                                                    <p className="text-xs text-slate-500 mt-0.5 truncate">{l.notes}</p>
+                                                                )}
+                                                            </div>
+                                                            <div className="flex items-center gap-2 shrink-0">
+                                                                <span className="text-sm font-bold text-blue-400 min-w-[40px] text-right">
+                                                                    {l.hours_worked}h
+                                                                </span>
+                                                                <button
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation()
+                                                                        handleOpenModal(undefined, l)
+                                                                    }}
+                                                                    className="p-1.5 rounded-md text-slate-500 hover:text-blue-400 hover:bg-blue-500/10 opacity-0 group-hover:opacity-100 transition-all"
+                                                                    title="Editar registro"
+                                                                >
+                                                                    <Pencil className="h-3.5 w-3.5" />
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            ) : expandedDayStats.isAbsenceJustified ? (
+                                                <div className="flex items-center gap-2 text-sm text-green-400 py-2">
+                                                    <CheckCircle className="h-4 w-4" />
+                                                    <span>Ausencia justificada</span>
+                                                </div>
+                                            ) : (
+                                                <p className="text-sm text-slate-500 py-2">No hay registros para este día.</p>
+                                            )}
                                         </div>
                                     )}
                                 </div>
-
-                                {isCurrentMonth && (
-                                    <div className="flex-1 space-y-0.5 overflow-hidden">
-                                        {dayLogs.length > 0 ? (
-                                            dayLogs.slice(0, 2).map(l => (
-                                                <div
-                                                    key={l.id}
-                                                    onClick={(e) => { e.stopPropagation(); handleOpenModal(undefined, l) }}
-                                                    className="text-xs bg-slate-900/50 px-1 py-0.5 rounded truncate hover:bg-slate-700"
-                                                >
-                                                    {l.tasks?.title?.slice(0, 15) || 'Sin tarea'}
-                                                </div>
-                                            ))
-                                        ) : isAbsenceJustified ? (
-                                            <div className="flex items-center gap-1 text-xs text-green-400">
-                                                <CheckCircle className="h-3 w-3" />
-                                                <span>Justif.</span>
-                                            </div>
-                                        ) : null}
-                                        {dayLogs.length > 2 && (
-                                            <span className="text-xs text-slate-500">+{dayLogs.length - 2} más</span>
-                                        )}
-                                    </div>
-                                )}
-                            </div>
-                        )
-                    })}
+                            )
+                        })
+                    })()}
                 </div>
             </div>
 
