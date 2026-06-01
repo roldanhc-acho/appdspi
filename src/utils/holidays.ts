@@ -9,6 +9,7 @@ export const HOLIDAYS_2026 = [
     "2026-04-03", // Viernes Santo
     "2026-05-01", // Día del Trabajador
     "2026-05-25", // Día de la Revolución de Mayo
+    "2026-06-15", // Paso a la Inmortalidad del Gral. Martín Miguel de Güemes
     "2026-06-20", // Paso a la Inmortalidad del General Manuel Belgrano
     "2026-07-09", // Día de la Independencia
     "2026-12-08", // Día de la Inmaculada Concepción de María
