@@ -14,6 +14,7 @@ type Project = Database["public"]["Tables"]["projects"]["Row"]
 
 import { TaskModal } from "@/components/projects/TaskModal"
 import { TaskKanban } from "@/components/projects/TaskKanban"
+import { NeonTooltip } from "@/components/projects/NeonTooltip"
 
 export default function TasksPage() {
     const [tasks, setTasks] = useState<Task[]>([])
@@ -26,6 +27,7 @@ export default function TasksPage() {
     const [showModal, setShowModal] = useState(false)
     const [filterStatus, setFilterStatus] = useState<string>("all")
     const [searchQuery, setSearchQuery] = useState("")
+    const [tooltip, setTooltip] = useState<{ text: string; x: number; y: number } | null>(null)
 
     // Form State
     const [formData, setFormData] = useState<{
@@ -469,7 +471,13 @@ export default function TasksPage() {
                         </thead>
                         <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                             {filteredTasks.map(task => (
-                                <tr key={task.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors" title={task.description || "Sin descripción"}>
+                                <tr 
+                                    key={task.id} 
+                                    className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors cursor-pointer"
+                                    onMouseEnter={(e) => setTooltip({ text: task.description || "Sin descripción", x: e.clientX, y: e.clientY })}
+                                    onMouseMove={(e) => setTooltip(prev => prev ? { ...prev, x: e.clientX, y: e.clientY } : null)}
+                                    onMouseLeave={() => setTooltip(null)}
+                                >
                                     <td className="px-6 py-4">
                                         <div className="flex flex-col">
                                             <span className="font-bold dark:text-white text-base">{task.title}</span>
@@ -582,6 +590,8 @@ export default function TasksPage() {
                 />
             )}
 
+
+            <NeonTooltip tooltip={tooltip} />
 
             {/* Create Task Modal */}
             <TaskModal

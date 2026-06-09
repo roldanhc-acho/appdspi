@@ -7,6 +7,8 @@ import { Clock, Pencil, AlertCircle } from "lucide-react"
 import { useDroppable, useDraggable } from "@dnd-kit/core"
 import { format } from "date-fns"
 import { parseLocalDate } from "@/utils/dateUtils"
+import { useState } from "react"
+import { NeonTooltip } from "./NeonTooltip"
 
 type KanbanTask = Task & {
     projects?: { name: string; client_id: string } | null
@@ -37,6 +39,8 @@ const containerStyles = {
 }
 
 export function TaskKanban({ tasks, onUpdateStatus, taskProgress = {}, onEdit }: TaskKanbanProps) {
+    const [tooltip, setTooltip] = useState<{ text: string; x: number; y: number } | null>(null)
+
     const columns = useMemo(() => {
         const cols = {
             pending: [] as KanbanTask[],
@@ -109,20 +113,23 @@ export function TaskKanban({ tasks, onUpdateStatus, taskProgress = {}, onEdit }:
                         colorClass={containerStyles[status]}
                         progressMap={taskProgress}
                         onEdit={onEdit}
+                        setTooltip={setTooltip}
                     />
                 ))}
             </div>
+            <NeonTooltip tooltip={tooltip} />
         </DndContext>
     )
 }
 
-function DroppableColumn({ id, title, tasks, colorClass, progressMap, onEdit }: {
+function DroppableColumn({ id, title, tasks, colorClass, progressMap, onEdit, setTooltip }: {
     id: string,
     title: string,
     tasks: KanbanTask[],
     colorClass: string,
     progressMap: Record<string, number>,
-    onEdit?: (task: KanbanTask) => void
+    onEdit?: (task: KanbanTask) => void,
+    setTooltip: (tooltip: { text: string; x: number; y: number } | null) => void
 }) {
     const { isOver, setNodeRef } = useDroppable({ id })
 
@@ -146,6 +153,7 @@ function DroppableColumn({ id, title, tasks, colorClass, progressMap, onEdit }: 
                         task={task}
                         progress={progressMap[task.id] || 0}
                         onEdit={onEdit}
+                        setTooltip={setTooltip}
                     />
                 ))}
                 {tasks.length === 0 && (
@@ -158,7 +166,7 @@ function DroppableColumn({ id, title, tasks, colorClass, progressMap, onEdit }: 
     )
 }
 
-function DraggableTask({ task, progress, onEdit }: { task: KanbanTask, progress: number, onEdit?: (task: KanbanTask) => void }) {
+function DraggableTask({ task, progress, onEdit, setTooltip }: { task: KanbanTask, progress: number, onEdit?: (task: KanbanTask) => void, setTooltip: (tooltip: { text: string; x: number; y: number } | null) => void }) {
     const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
         id: task.id,
     })
@@ -179,7 +187,9 @@ function DraggableTask({ task, progress, onEdit }: { task: KanbanTask, progress:
             style={style}
             {...listeners}
             {...attributes}
-            title={task.description || "Sin descripción"}
+            onMouseEnter={(e) => { if (!isDragging) setTooltip({ text: task.description || "Sin descripción", x: e.clientX, y: e.clientY }) }}
+            onMouseMove={(e) => { if (!isDragging) setTooltip(prev => prev ? { ...prev, x: e.clientX, y: e.clientY } : null) }}
+            onMouseLeave={() => setTooltip(null)}
             className={`group cursor-grab rounded-lg border bg-white p-4 shadow-sm transition-all hover:shadow-md dark:bg-slate-800 dark:border-slate-700 
                 ${isOverdue ? 'border-red-500/50 bg-red-50 dark:bg-red-900/10' : ''}
                 ${isDragging ? 'shadow-xl ring-2 ring-indigo-500 ring-opacity-50' : ''}`}
