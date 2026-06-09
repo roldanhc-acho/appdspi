@@ -179,6 +179,7 @@ function DraggableTask({ task, progress, onEdit }: { task: KanbanTask, progress:
             style={style}
             {...listeners}
             {...attributes}
+            title={task.description || "Sin descripción"}
             className={`group cursor-grab rounded-lg border bg-white p-4 shadow-sm transition-all hover:shadow-md dark:bg-slate-800 dark:border-slate-700 
                 ${isOverdue ? 'border-red-500/50 bg-red-50 dark:bg-red-900/10' : ''}
                 ${isDragging ? 'shadow-xl ring-2 ring-indigo-500 ring-opacity-50' : ''}`}

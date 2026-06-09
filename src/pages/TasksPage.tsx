@@ -469,7 +469,7 @@ export default function TasksPage() {
                         </thead>
                         <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                             {filteredTasks.map(task => (
-                                <tr key={task.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+                                <tr key={task.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors" title={task.description || "Sin descripción"}>
                                     <td className="px-6 py-4">
                                         <div className="flex flex-col">
                                             <span className="font-bold dark:text-white text-base">{task.title}</span>
