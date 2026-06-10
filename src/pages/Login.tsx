@@ -77,7 +77,7 @@ export default function Login() {
                 <div className="relative z-10">
                     <div className="flex items-center gap-2 mb-20">
                         {/* Logo Container */}
-                        <div className="h-56 w-auto bg-white rounded-lg flex items-center justify-center p-4">
+                        <div className="h-56 w-auto bg-slate-950/40 border border-slate-800/80 rounded-lg flex items-center justify-center p-4">
                             <img src="/logo.svg" alt="DSPI Logo" className="h-full w-auto object-contain" />
                         </div>
                     </div>
