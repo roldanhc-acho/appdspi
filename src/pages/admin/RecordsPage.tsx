@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react"
 import { supabase } from "@/lib/supabase"
 import { format } from "date-fns"
-import { Calendar, User, Download, ChevronLeft, ChevronRight, FileText, Building2, Edit2, Trash2, X, Save, CheckSquare, Loader2 } from "lucide-react"
+import { Calendar, User, Download, ChevronLeft, ChevronRight, Building2, Edit2, Trash2, X, CheckSquare, Loader2 } from "lucide-react"
 
 // Tipos
 type Profile = { id: string; full_name: string | null }

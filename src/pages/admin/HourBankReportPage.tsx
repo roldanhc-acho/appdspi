@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react"
 import { supabase } from "@/lib/supabase"
-import { Users, Download, Loader2, Database } from "lucide-react"
+import { Users, Download, Loader2 } from "lucide-react"
 
 type UserStats = {
     userId: string

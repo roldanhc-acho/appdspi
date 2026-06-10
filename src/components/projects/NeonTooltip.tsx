@@ -8,7 +8,6 @@ export function NeonTooltip({ tooltip }: NeonTooltipProps) {
     if (!tooltip) return null;
 
     // Ajustar posición para que no se salga de la pantalla
-    const padding = 20;
     const isTooFarRight = tooltip.x > window.innerWidth - 320;
     const isTooFarBottom = tooltip.y > window.innerHeight - 100;
 

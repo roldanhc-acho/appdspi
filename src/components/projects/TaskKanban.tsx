@@ -188,7 +188,7 @@ function DraggableTask({ task, progress, onEdit, setTooltip }: { task: KanbanTas
             {...listeners}
             {...attributes}
             onMouseEnter={(e) => { if (!isDragging) setTooltip({ text: task.description || "Sin descripción", x: e.clientX, y: e.clientY }) }}
-            onMouseMove={(e) => { if (!isDragging) setTooltip(prev => prev ? { ...prev, x: e.clientX, y: e.clientY } : null) }}
+            onMouseMove={(e) => { if (!isDragging) setTooltip({ text: task.description || "Sin descripción", x: e.clientX, y: e.clientY }) }}
             onMouseLeave={() => setTooltip(null)}
             className={`group cursor-grab rounded-lg border bg-white p-4 shadow-sm transition-all hover:shadow-md dark:bg-slate-800 dark:border-slate-700 
                 ${isOverdue ? 'border-red-500/50 bg-red-50 dark:bg-red-900/10' : ''}

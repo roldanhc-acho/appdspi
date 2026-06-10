@@ -101,10 +101,6 @@ export default function MonthlyReportPage() {
                 const currentMonthBank = (hourBanks || []).find(b => b.user_id === user.id && b.month === currentMonthStr)
                 const bankHoursThisMonth = currentMonthBank?.hours_saved || 0
 
-                // Bank hours total = sum of all hours_saved for this user
-                const userBanks = (hourBanks || []).filter(b => b.user_id === user.id)
-                const bankHours = userBanks.reduce((acc, b) => acc + (b.hours_saved || 0), 0)
-
                 // Productivity displayed = raw productivity minus what was saved to bank this month
                 const productivityHours = rawProductivity - bankHoursThisMonth
 
