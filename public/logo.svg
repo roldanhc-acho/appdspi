@@ -7,47 +7,64 @@
       @keyframes animD {
         0% { stroke-dashoffset: 1000; fill: transparent; }
         12% { stroke-dashoffset: 0; fill: transparent; }
-        16%, 95% { stroke-dashoffset: 0; fill: #FFFFFF; }
-        98%, 100% { stroke-dashoffset: 1000; fill: transparent; }
+        16% { stroke-dashoffset: 0; fill: #FFFFFF; }
+        95% { stroke-dashoffset: 0; fill: #FFFFFF; }
+        98% { stroke-dashoffset: 1000; fill: transparent; }
+        100% { stroke-dashoffset: 1000; fill: transparent; }
       }
 
       /* Letra S */
       @keyframes animS {
-        0%, 4% { stroke-dashoffset: 1000; fill: transparent; }
+        0% { stroke-dashoffset: 1000; fill: transparent; }
+        4% { stroke-dashoffset: 1000; fill: transparent; }
         16% { stroke-dashoffset: 0; fill: transparent; }
-        20%, 95% { stroke-dashoffset: 0; fill: #FFFFFF; }
-        98%, 100% { stroke-dashoffset: 1000; fill: transparent; }
+        20% { stroke-dashoffset: 0; fill: #FFFFFF; }
+        95% { stroke-dashoffset: 0; fill: #FFFFFF; }
+        98% { stroke-dashoffset: 1000; fill: transparent; }
+        100% { stroke-dashoffset: 1000; fill: transparent; }
       }
 
       /* Letra P */
       @keyframes animP {
-        0%, 8% { stroke-dashoffset: 1000; fill: transparent; }
+        0% { stroke-dashoffset: 1000; fill: transparent; }
+        8% { stroke-dashoffset: 1000; fill: transparent; }
         20% { stroke-dashoffset: 0; fill: transparent; }
-        24%, 95% { stroke-dashoffset: 0; fill: #FFFFFF; }
-        98%, 100% { stroke-dashoffset: 1000; fill: transparent; }
+        24% { stroke-dashoffset: 0; fill: #FFFFFF; }
+        95% { stroke-dashoffset: 0; fill: #FFFFFF; }
+        98% { stroke-dashoffset: 1000; fill: transparent; }
+        100% { stroke-dashoffset: 1000; fill: transparent; }
       }
 
       /* Letra I */
       @keyframes animI {
-        0%, 12% { stroke-dashoffset: 1000; fill: transparent; }
+        0% { stroke-dashoffset: 1000; fill: transparent; }
+        12% { stroke-dashoffset: 1000; fill: transparent; }
         22% { stroke-dashoffset: 0; fill: transparent; }
-        26%, 95% { stroke-dashoffset: 0; fill: #FFFFFF; }
-        98%, 100% { stroke-dashoffset: 1000; fill: transparent; }
+        26% { stroke-dashoffset: 0; fill: #FFFFFF; }
+        95% { stroke-dashoffset: 0; fill: #FFFFFF; }
+        98% { stroke-dashoffset: 1000; fill: transparent; }
+        100% { stroke-dashoffset: 1000; fill: transparent; }
       }
 
       /* Triángulo Rojo */
       @keyframes animTri {
-        0%, 14% { stroke-dashoffset: 300; fill: transparent; }
+        0% { stroke-dashoffset: 300; fill: transparent; }
+        14% { stroke-dashoffset: 300; fill: transparent; }
         24% { stroke-dashoffset: 0; fill: transparent; }
-        27%, 95% { stroke-dashoffset: 0; fill: #E13A3E; }
-        98%, 100% { stroke-dashoffset: 300; fill: transparent; }
+        27% { stroke-dashoffset: 0; fill: #E13A3E; }
+        95% { stroke-dashoffset: 0; fill: #E13A3E; }
+        98% { stroke-dashoffset: 300; fill: transparent; }
+        100% { stroke-dashoffset: 300; fill: transparent; }
       }
 
       /* Línea Inferior */
       @keyframes animLin {
-        0%, 22% { transform: scaleX(0); animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1); }
-        28%, 95% { transform: scaleX(1); animation-timing-function: ease; }
-        98%, 100% { transform: scaleX(0); }
+        0% { transform: scaleX(0); animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1); }
+        22% { transform: scaleX(0); animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1); }
+        28% { transform: scaleX(1); animation-timing-function: ease; }
+        95% { transform: scaleX(1); animation-timing-function: ease; }
+        98% { transform: scaleX(0); }
+        100% { transform: scaleX(0); }
       }
 
       /* --- ESTILOS BASE DE LOS TRAZOS --- */
