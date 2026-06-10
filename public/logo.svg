@@ -1,53 +1,53 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 650 350" width="100%" height="100%">
   <defs>
     <style>
-      /* --- ANIMACIONES CSS EN BUCLE --- */
+      /* --- ANIMACIONES CSS EN BUCLE (10 SEGUNDOS) --- */
 
       /* Letra D */
       @keyframes animD {
         0% { stroke-dashoffset: 1000; fill: transparent; }
-        30% { stroke-dashoffset: 0; fill: transparent; }
-        40%, 85% { stroke-dashoffset: 0; fill: #1E1E1C; }
-        90%, 100% { stroke-dashoffset: 1000; fill: transparent; }
+        12% { stroke-dashoffset: 0; fill: transparent; }
+        16%, 95% { stroke-dashoffset: 0; fill: #1E1E1C; }
+        98%, 100% { stroke-dashoffset: 1000; fill: transparent; }
       }
 
       /* Letra S */
       @keyframes animS {
-        0%, 10% { stroke-dashoffset: 1000; fill: transparent; }
-        40% { stroke-dashoffset: 0; fill: transparent; }
-        50%, 85% { stroke-dashoffset: 0; fill: #1E1E1C; }
-        90%, 100% { stroke-dashoffset: 1000; fill: transparent; }
+        0%, 4% { stroke-dashoffset: 1000; fill: transparent; }
+        16% { stroke-dashoffset: 0; fill: transparent; }
+        20%, 95% { stroke-dashoffset: 0; fill: #1E1E1C; }
+        98%, 100% { stroke-dashoffset: 1000; fill: transparent; }
       }
 
       /* Letra P */
       @keyframes animP {
-        0%, 20% { stroke-dashoffset: 1000; fill: transparent; }
-        50% { stroke-dashoffset: 0; fill: transparent; }
-        60%, 85% { stroke-dashoffset: 0; fill: #1E1E1C; }
-        90%, 100% { stroke-dashoffset: 1000; fill: transparent; }
+        0%, 8% { stroke-dashoffset: 1000; fill: transparent; }
+        20% { stroke-dashoffset: 0; fill: transparent; }
+        24%, 95% { stroke-dashoffset: 0; fill: #1E1E1C; }
+        98%, 100% { stroke-dashoffset: 1000; fill: transparent; }
       }
 
       /* Letra I */
       @keyframes animI {
-        0%, 30% { stroke-dashoffset: 1000; fill: transparent; }
-        55% { stroke-dashoffset: 0; fill: transparent; }
-        65%, 85% { stroke-dashoffset: 0; fill: #1E1E1C; }
-        90%, 100% { stroke-dashoffset: 1000; fill: transparent; }
+        0%, 12% { stroke-dashoffset: 1000; fill: transparent; }
+        22% { stroke-dashoffset: 0; fill: transparent; }
+        26%, 95% { stroke-dashoffset: 0; fill: #1E1E1C; }
+        98%, 100% { stroke-dashoffset: 1000; fill: transparent; }
       }
 
       /* Triángulo Rojo */
       @keyframes animTri {
-        0%, 35% { stroke-dashoffset: 300; fill: transparent; }
-        60% { stroke-dashoffset: 0; fill: transparent; }
-        67.5%, 85% { stroke-dashoffset: 0; fill: #E13A3E; }
-        90%, 100% { stroke-dashoffset: 300; fill: transparent; }
+        0%, 14% { stroke-dashoffset: 300; fill: transparent; }
+        24% { stroke-dashoffset: 0; fill: transparent; }
+        27%, 95% { stroke-dashoffset: 0; fill: #E13A3E; }
+        98%, 100% { stroke-dashoffset: 300; fill: transparent; }
       }
 
       /* Línea Inferior */
       @keyframes animLin {
-        0%, 55% { transform: scaleX(0); animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1); }
-        70%, 85% { transform: scaleX(1); animation-timing-function: ease; }
-        90%, 100% { transform: scaleX(0); }
+        0%, 22% { transform: scaleX(0); animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1); }
+        28%, 95% { transform: scaleX(1); animation-timing-function: ease; }
+        98%, 100% { transform: scaleX(0); }
       }
 
       /* --- ESTILOS BASE DE LOS TRAZOS --- */
@@ -61,10 +61,10 @@
       }
 
       /* Asignación de animaciones */
-      .letra-d { animation: animD 4s infinite; }
-      .letra-s { animation: animS 4s infinite; }
-      .letra-p { animation: animP 4s infinite; }
-      .letra-i { animation: animI 4s infinite; }
+      .letra-d { animation: animD 10s infinite; }
+      .letra-s { animation: animS 10s infinite; }
+      .letra-p { animation: animP 10s infinite; }
+      .letra-i { animation: animI 10s infinite; }
 
       /* Elementos Rojos */
       .triangulo-rojo {
@@ -73,14 +73,14 @@
         stroke-width: 2;
         stroke-dasharray: 300;
         stroke-dashoffset: 300;
-        animation: animTri 4s infinite;
+        animation: animTri 10s infinite;
       }
 
       .linea-inferior {
         fill: #E13A3E;
         transform: scaleX(0);
         transform-origin: left;
-        animation: animLin 4s infinite;
+        animation: animLin 10s infinite;
       }
     </style>
   </defs>
