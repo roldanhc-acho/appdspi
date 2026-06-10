@@ -48,7 +48,7 @@ export function Sidebar() {
     return (
         <div className="flex h-full w-full flex-col bg-zinc-950 border-r border-zinc-900">
             <div className="flex h-16 shrink-0 items-center px-6">
-                <img src="/logo.png" alt="DSPI Logo" className="h-8 object-contain" />
+                <img src="/logo.svg" alt="DSPI Logo" className="h-10 w-full object-contain" />
             </div>
 
             <div className="flex-1 overflow-auto py-4">

@@ -78,7 +78,7 @@ export default function Login() {
                     <div className="flex items-center gap-2 mb-20">
                         {/* Logo Container */}
                         <div className="h-32 w-auto bg-white rounded-sm flex items-center justify-center p-2">
-                            <img src="/logo.png" alt="DSPI Logo" className="h-full w-auto object-contain" />
+                            <img src="/logo.svg" alt="DSPI Logo" className="h-full w-auto object-contain" />
                         </div>
                     </div>
 
