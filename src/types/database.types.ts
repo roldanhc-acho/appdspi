@@ -210,6 +210,7 @@ export type Database = {
                     hourly_rate: number | null
                     id: string
                     role: Database["public"]["Enums"]["user_role"] | null
+                    daily_hours: number | null
                 }
                 Insert: {
                     avatar_url?: string | null
@@ -219,6 +220,7 @@ export type Database = {
                     hourly_rate?: number | null
                     id: string
                     role?: Database["public"]["Enums"]["user_role"] | null
+                    daily_hours?: number | null
                 }
                 Update: {
                     avatar_url?: string | null
@@ -228,6 +230,7 @@ export type Database = {
                     hourly_rate?: number | null
                     id?: string
                     role?: Database["public"]["Enums"]["user_role"] | null
+                    daily_hours?: number | null
                 }
                 Relationships: []
             }

@@ -17,7 +17,8 @@ export default function EmployeesPage() {
         hourly_rate: "",
         role: "employee" as "admin" | "employee",
         email: "",
-        is_active: true
+        is_active: true,
+        daily_hours: "9"
     })
 
     useEffect(() => {
@@ -47,7 +48,8 @@ export default function EmployeesPage() {
             hourly_rate: user.hourly_rate?.toString() || "",
             role: user.role || "employee",
             email: user.email || "",
-            is_active: user.is_active !== false // default true if undefined
+            is_active: user.is_active !== false, // default true if undefined
+            daily_hours: user.daily_hours?.toString() || "9"
         })
     }
 
@@ -61,7 +63,8 @@ export default function EmployeesPage() {
                 hourly_rate: editForm.hourly_rate ? parseFloat(editForm.hourly_rate) : null,
                 role: editForm.role,
                 email: editForm.email,
-                is_active: editForm.is_active
+                is_active: editForm.is_active,
+                daily_hours: editForm.daily_hours ? parseInt(editForm.daily_hours) : 9
             }).eq("id", editingUser.id)
 
             if (error) throw error
@@ -240,6 +243,22 @@ export default function EmployeesPage() {
                                     className="w-full rounded border p-2 dark:bg-slate-800 dark:border-slate-700 dark:text-white"
                                     placeholder="0.00"
                                 />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium dark:text-gray-300">Horas Diarias de Trabajo</label>
+                                <input
+                                    type="number"
+                                    value={editForm.daily_hours}
+                                    onChange={(e) => setEditForm({ ...editForm, daily_hours: e.target.value })}
+                                    className="w-full rounded border p-2 dark:bg-slate-800 dark:border-slate-700 dark:text-white"
+                                    placeholder="9"
+                                    min="1"
+                                    max="24"
+                                />
+                                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                                    Base de horas esperadas por día (usada para productividad y banco de horas). Jornada estándar: 9 horas.
+                                </p>
                             </div>
 
                             <div>
