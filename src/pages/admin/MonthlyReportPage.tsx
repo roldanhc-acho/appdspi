@@ -36,7 +36,6 @@ export default function MonthlyReportPage() {
     // Calculate working days in month
     const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd })
     const workingDays = daysInMonth.filter(d => !isWeekend(d) && !isNonWorkingDay(d)).length
-    const expectedHours = workingDays * 9 // 9 hours per working day
 
     useEffect(() => {
         fetchData()
@@ -78,7 +77,11 @@ export default function MonthlyReportPage() {
                 const userLogs = (timeLogs || []).filter(l => l.user_id === user.id)
                 const hoursRegistered = userLogs.reduce((acc, l) => acc + l.hours_worked, 0)
 
-                // Calculate absence hours (9h per absence day in this month)
+                // Per-user daily hours (default 9 if not set)
+                const userDailyHours: number = (user as any).daily_hours ?? 9
+                const userExpectedHours = workingDays * userDailyHours
+
+                // Calculate absence hours using user's own daily hours
                 const userAbsences = (absences || []).filter(a => a.user_id === user.id)
                 let absenceHours = 0
 
@@ -87,15 +90,15 @@ export default function MonthlyReportPage() {
                         const dayStr = format(day, 'yyyy-MM-dd')
                         if (dayStr >= absence.start_date && dayStr <= absence.end_date) {
                             if (!isWeekend(day) && !isNonWorkingDay(day)) {
-                                absenceHours += 9
+                                absenceHours += userDailyHours
                             }
                         }
                     })
                 })
 
-                // Productivity = (registered + absences) - expected
+                // Productivity = (registered + absences) - expected (per user)
                 const effectiveHours = hoursRegistered + absenceHours
-                const rawProductivity = effectiveHours - expectedHours
+                const rawProductivity = effectiveHours - userExpectedHours
 
                 // Bank hours for current month only
                 const currentMonthBank = (hourBanks || []).find(b => b.user_id === user.id && b.month === currentMonthStr)
@@ -206,7 +209,7 @@ export default function MonthlyReportPage() {
                     </div>
 
                     <div className="text-sm text-slate-400">
-                        {workingDays} días laborables · {expectedHours}h esperadas/usuario
+                        {workingDays} días laborables · {workingDays * 9}h esperadas (jornada estándar 9h)
                     </div>
                 </div>
             </div>
