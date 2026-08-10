@@ -15,8 +15,16 @@ type Project = Database["public"]["Tables"]["projects"]["Row"]
 import { TaskModal } from "@/components/projects/TaskModal"
 import { TaskKanban } from "@/components/projects/TaskKanban"
 import { NeonTooltip } from "@/components/projects/NeonTooltip"
+import { SearchableSelect, type SelectOption } from "@/components/ui/SearchableSelect"
 
 export default function TasksPage() {
+    const statusFilterOptions: SelectOption[] = [
+        { value: "all", label: "Todos los estados" },
+        { value: "pending", label: "Pendiente" },
+        { value: "in_progress", label: "En Proceso" },
+        { value: "finished", label: "Finalizado" },
+        { value: "cancelled", label: "Suspendido/Cancelado" },
+    ]
     const [tasks, setTasks] = useState<Task[]>([])
     const [projects, setProjects] = useState<Project[]>([])
     const [clients, setClients] = useState<any[]>([])
@@ -425,18 +433,14 @@ export default function TasksPage() {
                     />
                 </div>
 
-                <div className="flex items-center gap-3">
-                    <select
+                <div className="flex items-center gap-3 min-w-[180px]">
+                    <SearchableSelect
                         value={filterStatus}
-                        onChange={(e) => setFilterStatus(e.target.value)}
-                        className="rounded-lg border border-slate-200 bg-white p-2 text-sm outline-none focus:ring-2 focus:ring-blue-500/20 dark:bg-slate-800 dark:border-slate-700 dark:text-white"
-                    >
-                        <option value="all">Todos los estados</option>
-                        <option value="pending">Pendiente</option>
-                        <option value="in_progress">En Proceso</option>
-                        <option value="finished">Finalizado</option>
-                        <option value="cancelled">Suspendido/Cancelado</option>
-                    </select>
+                        onChange={(val) => setFilterStatus(val)}
+                        options={statusFilterOptions}
+                        placeholder="Todos los estados"
+                    />
+                </div>
 
                     <div className="flex rounded-lg border border-slate-200 bg-white p-1 dark:bg-slate-800 dark:border-slate-700">
                         <button
@@ -453,7 +457,6 @@ export default function TasksPage() {
                         </button>
                     </div>
                 </div>
-            </div>
 
             {/* List View */}
             {view === 'list' && (

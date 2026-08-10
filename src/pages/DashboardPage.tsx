@@ -1,14 +1,14 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { useAuth } from "@/contexts/AuthContext"
 import { supabase } from "@/lib/supabase"
 import type { Database } from "@/types/database.types"
+import { SearchableSelect, type SelectOption } from "@/components/ui/SearchableSelect"
 import {
     Clock,
     Folder,
     CheckCircle,
     Wallet,
     Calendar,
-    Filter,
     Pencil,
     AlertCircle,
     Check,
@@ -52,14 +52,28 @@ export default function DashboardPage() {
     const [taskProgress, setTaskProgress] = useState<Record<string, number>>({})
 
 
-    // Filters
-    const [filterUser, setFilterUser] = useState<string>("all")
-    const [filterClient, setFilterClient] = useState<string>("all")
-    const [startDate, setStartDate] = useState(format(startOfMonth(new Date()), 'yyyy-MM-dd'))
-    const [endDate, setEndDate] = useState(format(new Date(), 'yyyy-MM-dd'))
-
+    // Admin Filters State
+    const [filterUser, setFilterUser] = useState("all")
+    const [filterClient, setFilterClient] = useState("all")
     const [users, setUsers] = useState<Profile[]>([])
     const [clients, setClients] = useState<any[]>([])
+
+    const userOptions = useMemo<SelectOption[]>(() => {
+        return [
+            { value: "all", label: "Todo el equipo" },
+            ...users.map(u => ({ value: u.id, label: u.full_name || "Sin nombre" }))
+        ]
+    }, [users])
+
+    const clientOptions = useMemo<SelectOption[]>(() => {
+        return [
+            { value: "all", label: "Todos los clientes" },
+            ...clients.map(c => ({ value: c.id, label: c.name }))
+        ]
+    }, [clients])
+
+    const [startDate, setStartDate] = useState(format(startOfMonth(new Date()), 'yyyy-MM-dd'))
+    const [endDate, setEndDate] = useState(format(new Date(), 'yyyy-MM-dd'))
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
@@ -307,33 +321,25 @@ export default function DashboardPage() {
                         </div>
 
                         {/* User Filter */}
-                        <div className="flex items-center gap-2 rounded-md border bg-white px-3 py-2 text-sm dark:bg-slate-800 dark:border-slate-700">
-                            <Filter className="h-4 w-4 text-slate-500" />
-                            <select
+                        <div className="min-w-[180px]">
+                            <SearchableSelect
                                 value={filterUser}
-                                onChange={(e) => setFilterUser(e.target.value)}
-                                className="bg-transparent outline-none dark:text-slate-300"
-                            >
-                                <option value="all">Todo el equipo</option>
-                                {users.map(u => (
-                                    <option key={u.id} value={u.id}>{u.full_name}</option>
-                                ))}
-                            </select>
+                                onChange={(val) => setFilterUser(val || "all")}
+                                options={userOptions}
+                                placeholder="Todo el equipo"
+                                searchPlaceholder="Buscar miembro..."
+                            />
                         </div>
 
                         {/* Client Filter */}
-                        <div className="flex items-center gap-2 rounded-md border bg-white px-3 py-2 text-sm dark:bg-slate-800 dark:border-slate-700">
-                            <Folder className="h-4 w-4 text-slate-500" />
-                            <select
+                        <div className="min-w-[180px]">
+                            <SearchableSelect
                                 value={filterClient}
-                                onChange={(e) => setFilterClient(e.target.value)}
-                                className="bg-transparent outline-none dark:text-slate-300"
-                            >
-                                <option value="all">Todos los clientes</option>
-                                {clients.map(c => (
-                                    <option key={c.id} value={c.id}>{c.name}</option>
-                                ))}
-                            </select>
+                                onChange={(val) => setFilterClient(val || "all")}
+                                options={clientOptions}
+                                placeholder="Todos los clientes"
+                                searchPlaceholder="Buscar cliente..."
+                            />
                         </div>
                     </div>
                 )}

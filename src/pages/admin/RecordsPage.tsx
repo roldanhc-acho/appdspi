@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { supabase } from "@/lib/supabase"
 import { format } from "date-fns"
 import { Calendar, User, Download, ChevronLeft, ChevronRight, Building2, Edit2, Trash2, X, CheckSquare, Loader2 } from "lucide-react"
+import { SearchableSelect, type SelectOption } from "@/components/ui/SearchableSelect"
 
 // Tipos
 type Profile = { id: string; full_name: string | null }
@@ -52,6 +53,27 @@ export default function RecordsPage() {
     const [selectedUserId, setSelectedUserId] = useState("all")
     const [selectedClientId, setSelectedClientId] = useState("all")
     const [selectedTaskId, setSelectedTaskId] = useState("all")
+
+    const userOptions = useMemo<SelectOption[]>(() => {
+        return [
+            { value: "all", label: "Todos los empleados" },
+            ...users.map(u => ({ value: u.id, label: u.full_name || "Sin nombre" }))
+        ]
+    }, [users])
+
+    const clientOptions = useMemo<SelectOption[]>(() => {
+        return [
+            { value: "all", label: "Todos los clientes" },
+            ...clients.map(c => ({ value: c.id, label: c.name }))
+        ]
+    }, [clients])
+
+    const taskOptions = useMemo<SelectOption[]>(() => {
+        return [
+            { value: "all", label: "Todas las tareas" },
+            ...tasks.map(t => ({ value: t.id, label: `${t.title} ${t.project ? `(${t.project.name})` : ''}` }))
+        ]
+    }, [tasks])
 
     // Paginación
     const [page, setPage] = useState(1)
@@ -492,10 +514,13 @@ export default function RecordsPage() {
                         <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider ml-1 flex items-center gap-2">
                             <User className="w-3 h-3" /> Empleado
                         </label>
-                        <select className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none" value={selectedUserId} onChange={(e) => setSelectedUserId(e.target.value)}>
-                            <option value="all">Todos los empleados</option>
-                            {users.map(u => <option key={u.id} value={u.id}>{u.full_name || "Sin nombre"}</option>)}
-                        </select>
+                        <SearchableSelect
+                            value={selectedUserId}
+                            onChange={(val) => setSelectedUserId(val || "all")}
+                            options={userOptions}
+                            placeholder="Todos los empleados"
+                            searchPlaceholder="Buscar empleado..."
+                        />
                     </div>
 
                     {/* Selector de Cliente */}
@@ -503,10 +528,13 @@ export default function RecordsPage() {
                         <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider ml-1 flex items-center gap-2">
                             <Building2 className="w-3 h-3" /> Cliente
                         </label>
-                        <select className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none" value={selectedClientId} onChange={(e) => { setSelectedClientId(e.target.value); setSelectedTaskId("all"); }}>
-                            <option value="all">Todos los clientes</option>
-                            {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                        </select>
+                        <SearchableSelect
+                            value={selectedClientId}
+                            onChange={(val) => { setSelectedClientId(val || "all"); setSelectedTaskId("all"); }}
+                            options={clientOptions}
+                            placeholder="Todos los clientes"
+                            searchPlaceholder="Buscar cliente..."
+                        />
                     </div>
 
                     {/* Selector de Tarea */}
@@ -514,12 +542,13 @@ export default function RecordsPage() {
                         <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider ml-1 flex items-center gap-2">
                             <CheckSquare className="w-3 h-3" /> Tarea
                         </label>
-                        <select className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none" value={selectedTaskId} onChange={(e) => setSelectedTaskId(e.target.value)}>
-                            <option value="all">Todas las tareas</option>
-                            {tasks.map(t => (
-                                <option key={t.id} value={t.id}>{t.title} {t.project ? `(${t.project.name})` : ''}</option>
-                            ))}
-                        </select>
+                        <SearchableSelect
+                            value={selectedTaskId}
+                            onChange={(val) => setSelectedTaskId(val || "all")}
+                            options={taskOptions}
+                            placeholder="Todas las tareas"
+                            searchPlaceholder="Buscar tarea..."
+                        />
                     </div>
                 </div>
             </div>

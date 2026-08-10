@@ -3,6 +3,7 @@ import { supabase } from "@/lib/supabase"
 import { useAuth } from "@/contexts/AuthContext"
 import type { Database } from "@/types/database.types"
 import { Plus, Globe, Lock, Trash2, X, Clock, Pencil, RefreshCw, Users, ChevronLeft, ChevronRight } from "lucide-react"
+import { SearchableSelect, type SelectOption } from "@/components/ui/SearchableSelect"
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth, isSameDay, addMonths, subMonths } from "date-fns"
 import { es } from "date-fns/locale"
 
@@ -24,6 +25,19 @@ const recurrenceLabels: Record<RecurrenceType, string> = {
     monthly: "Mensual",
     yearly: "Anual"
 }
+
+const eventFilterOptions: SelectOption[] = [
+    { value: "all", label: "Todos los eventos" },
+    { value: "public", label: "Solo públicos" },
+    { value: "private", label: "Solo privados" },
+]
+
+const recurrenceOptions: SelectOption[] = [
+    { value: "once", label: "Una sola vez" },
+    { value: "weekly", label: "Cada semana" },
+    { value: "monthly", label: "Cada mes" },
+    { value: "yearly", label: "Cada año" },
+]
 
 const WEEKDAY_NAMES = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"]
 
@@ -323,15 +337,14 @@ export default function AgendaPage() {
                 </div>
 
                 <div className="flex items-center gap-2">
-                    <select
-                        value={filter}
-                        onChange={(e) => setFilter(e.target.value as any)}
-                        className="rounded-md border px-3 py-2 text-sm dark:bg-slate-800 dark:border-slate-700 dark:text-white"
-                    >
-                        <option value="all">Todos los eventos</option>
-                        <option value="public">Solo públicos</option>
-                        <option value="private">Solo privados</option>
-                    </select>
+                    <div className="flex items-center gap-2 min-w-[170px]">
+                        <SearchableSelect
+                            value={filter}
+                            onChange={(val) => setFilter(val as any)}
+                            options={eventFilterOptions}
+                            placeholder="Todos los eventos"
+                        />
+                    </div>
 
                     <button
                         onClick={() => openCreateModal()}
@@ -674,21 +687,15 @@ export default function AgendaPage() {
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-medium dark:text-gray-300 mb-2">
+                                    <label className="block text-sm font-medium dark:text-gray-300 mb-1">
                                         Repetición
                                     </label>
-                                    <select
+                                    <SearchableSelect
                                         value={formData.recurrence}
-                                        onChange={(e) =>
-                                            setFormData({ ...formData, recurrence: e.target.value as RecurrenceType })
-                                        }
-                                        className="w-full rounded-md border p-2 dark:bg-slate-800 dark:border-slate-700 dark:text-white"
-                                    >
-                                        <option value="once">Una sola vez</option>
-                                        <option value="weekly">Cada semana</option>
-                                        <option value="monthly">Cada mes</option>
-                                        <option value="yearly">Cada año</option>
-                                    </select>
+                                        onChange={(val) => setFormData({ ...formData, recurrence: val as RecurrenceType })}
+                                        options={recurrenceOptions}
+                                        placeholder="Una sola vez"
+                                    />
                                 </div>
 
                                 <div>

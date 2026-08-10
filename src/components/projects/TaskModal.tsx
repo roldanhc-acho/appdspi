@@ -5,6 +5,7 @@ import { Plus, X, Trash2, ChevronRight, Clock } from "lucide-react"
 import { parseISO, isBefore } from "date-fns"
 import { countWorkingDays } from "@/utils/holidays"
 import { formatDateForInput, prepareDateForSave } from "@/utils/dateUtils"
+import { SearchableSelect, type SelectOption } from "@/components/ui/SearchableSelect"
 
 
 type Task = Database["public"]["Tables"]["tasks"]["Row"]
@@ -235,6 +236,27 @@ export function TaskModal({ isOpen, onClose, onSuccess, initialData, projects = 
         return workingDays * 9
     }
 
+    const clientOptions = useMemo<SelectOption[]>(() => {
+        return clients.map(c => ({ value: c.id, label: c.name }))
+    }, [clients])
+
+    const projectOptions = useMemo<SelectOption[]>(() => {
+        return availableProjects.map(p => ({ value: p.id, label: p.name }))
+    }, [availableProjects])
+
+    const statusOptions: SelectOption[] = [
+        { value: "pending", label: "Pendiente" },
+        { value: "in_progress", label: "En Progreso" },
+        { value: "finished", label: "Finalizado" },
+        { value: "cancelled", label: "Suspendido/Cancelado" },
+    ]
+
+    const priorityOptions: SelectOption[] = [
+        { value: "low", label: "Baja" },
+        { value: "medium", label: "Media" },
+        { value: "high", label: "Alta" },
+    ]
+
     const totalEstimated = useMemo(() => {
         const isSubtask = !!initialData?.parent_task_id
         if (isSubtask) {
@@ -402,35 +424,29 @@ export function TaskModal({ isOpen, onClose, onSuccess, initialData, projects = 
                     {/* Mostrar siempre selección de empresa para tareas principales, permitiendo cambiarla */}
                     {!isSubtaskView && (
                         <div>
-                            <label className="block text-sm font-medium dark:text-gray-300">Empresa (Cliente)</label>
-                            <select
+                            <label className="block text-sm font-medium dark:text-gray-300 mb-1">Empresa (Cliente)</label>
+                            <SearchableSelect
                                 required
                                 value={formData.client_id}
-                                onChange={(e) => setFormData({ ...formData, client_id: e.target.value, project_id: "" })}
-                                className="w-full rounded border p-2 dark:bg-slate-800 dark:border-slate-700 dark:text-white"
-                            >
-                                <option value="">Seleccionar Empresa</option>
-                                {clients.map((c: Client) => (
-                                    <option key={c.id} value={c.id}>{c.name}</option>
-                                ))}
-                            </select>
+                                onChange={(val) => setFormData({ ...formData, client_id: val, project_id: "" })}
+                                options={clientOptions}
+                                placeholder="Seleccionar Empresa"
+                                searchPlaceholder="Buscar empresa..."
+                            />
                         </div>
                     )}
 
                     {!fixedProjectId && !isSubtaskView && (
                         <div>
-                            <label className="block text-sm font-medium dark:text-gray-300">Proyecto (Opcional)</label>
-                            <select
+                            <label className="block text-sm font-medium dark:text-gray-300 mb-1">Proyecto (Opcional)</label>
+                            <SearchableSelect
                                 value={formData.project_id}
-                                onChange={(e) => setFormData({ ...formData, project_id: e.target.value })}
-                                className="w-full rounded border p-2 dark:bg-slate-800 dark:border-slate-700 dark:text-white"
+                                onChange={(val) => setFormData({ ...formData, project_id: val })}
+                                options={projectOptions}
+                                placeholder="Tarea General (Sin Proyecto)"
+                                searchPlaceholder="Buscar proyecto..."
                                 disabled={!formData.client_id}
-                            >
-                                <option value="">Tarea General (Sin Proyecto)</option>
-                                {availableProjects.map((p: Project) => (
-                                    <option key={p.id} value={p.id}>{p.name}</option>
-                                ))}
-                            </select>
+                            />
                         </div>
                     )}
 
@@ -466,29 +482,22 @@ export function TaskModal({ isOpen, onClose, onSuccess, initialData, projects = 
 
                     <div className="grid grid-cols-3 gap-4">
                         <div>
-                            <label className="block text-sm font-medium dark:text-gray-300">Estado</label>
-                            <select
+                            <label className="block text-sm font-medium dark:text-gray-300 mb-1">Estado</label>
+                            <SearchableSelect
                                 value={formData.status}
-                                onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                                className="w-full rounded border p-2 dark:bg-slate-800 dark:border-slate-700 dark:text-white"
-                            >
-                                <option value="pending">Pendiente</option>
-                                <option value="in_progress">En Progreso</option>
-                                <option value="finished">Finalizado</option>
-                                <option value="cancelled">Suspendido/Cancelado</option>
-                            </select>
+                                onChange={(val) => setFormData({ ...formData, status: val })}
+                                options={statusOptions}
+                                placeholder="Seleccionar estado"
+                            />
                         </div>
                         <div>
-                            <label className="block text-sm font-medium dark:text-gray-300">Prioridad</label>
-                            <select
+                            <label className="block text-sm font-medium dark:text-gray-300 mb-1">Prioridad</label>
+                            <SearchableSelect
                                 value={formData.priority}
-                                onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
-                                className="w-full rounded border p-2 dark:bg-slate-800 dark:border-slate-700 dark:text-white"
-                            >
-                                <option value="low">Baja</option>
-                                <option value="medium">Media</option>
-                                <option value="high">Alta</option>
-                            </select>
+                                onChange={(val) => setFormData({ ...formData, priority: val })}
+                                options={priorityOptions}
+                                placeholder="Seleccionar prioridad"
+                            />
                         </div>
                         <div>
                             <label className="block text-sm font-medium dark:text-gray-300">Horas Estimadas</label>

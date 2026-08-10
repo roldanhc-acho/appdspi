@@ -9,6 +9,7 @@ import { TaskModal } from "@/components/projects/TaskModal"
 import { TaskKanban } from "@/components/projects/TaskKanban"
 import { TaskGantt } from "@/components/projects/TaskGantt"
 import { formatLocalDate } from "@/utils/dateUtils"
+import { SearchableSelect, type SelectOption } from "@/components/ui/SearchableSelect"
 
 type Project = Database["public"]["Tables"]["projects"]["Row"] & {
     clients?: { name: string }
@@ -34,6 +35,27 @@ export default function ProjectDetailsPage() {
     const [showFilters, setShowFilters] = useState(false)
     const [isImporting, setIsImporting] = useState(false)
     const [taskProgress, setTaskProgress] = useState<Record<string, number>>({})
+
+    const responsibleOptions = useMemo<SelectOption[]>(() => {
+        return [
+            { value: "", label: "Todos los responsables" },
+            ...projectUsers.map(u => ({ value: u.id, label: u.full_name || "Sin nombre" }))
+        ]
+    }, [projectUsers])
+
+    const taskTypeOptions: SelectOption[] = [
+        { value: "all", label: "Todas" },
+        { value: "parents", label: "Solo Tareas Madre" },
+        { value: "subtasks", label: "Solo Subtareas" },
+    ]
+
+    const statusFilterOptions: SelectOption[] = [
+        { value: "all", label: "Cualquier estado" },
+        { value: "pending", label: "Pendiente" },
+        { value: "in_progress", label: "En Progreso" },
+        { value: "review", label: "En Revisión" },
+        { value: "finished", label: "Finalizado" },
+    ]
 
 
     const fetchProjectDetails = async () => {
@@ -452,42 +474,31 @@ export default function ProjectDetailsPage() {
                     <div className="grid grid-cols-1 md:grid-cols-5 gap-4 p-4 rounded-xl border border-slate-200 bg-slate-50/50 dark:border-slate-800 dark:bg-slate-900/50 animate-in fade-in slide-in-from-top-2">
                         <div>
                             <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5 uppercase">Responsable</label>
-                            <select
+                            <SearchableSelect
                                 value={filterResponsible}
-                                onChange={(e) => setFilterResponsible(e.target.value)}
-                                className="w-full rounded-md border border-slate-200 bg-white p-2 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-                            >
-                                <option value="">Todos los responsables</option>
-                                {projectUsers.map(u => (
-                                    <option key={u.id} value={u.id}>{u.full_name}</option>
-                                ))}
-                            </select>
+                                onChange={(val) => setFilterResponsible(val)}
+                                options={responsibleOptions}
+                                placeholder="Todos los responsables"
+                                searchPlaceholder="Buscar responsable..."
+                            />
                         </div>
                         <div>
                             <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5 uppercase">Tipo de Tarea</label>
-                            <select
+                            <SearchableSelect
                                 value={filterType}
-                                onChange={(e) => setFilterType(e.target.value as any)}
-                                className="w-full rounded-md border border-slate-200 bg-white p-2 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-                            >
-                                <option value="all">Todas</option>
-                                <option value="parents">Solo Tareas Madre</option>
-                                <option value="subtasks">Solo Subtareas</option>
-                            </select>
+                                onChange={(val) => setFilterType(val as any)}
+                                options={taskTypeOptions}
+                                placeholder="Todas"
+                            />
                         </div>
                         <div>
                             <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5 uppercase">Estado</label>
-                            <select
+                            <SearchableSelect
                                 value={filterStatus || "all"}
-                                onChange={(e) => setFilterStatus(e.target.value as any)}
-                                className="w-full rounded-md border border-slate-200 bg-white p-2 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-                            >
-                                <option value="all">Cualquier estado</option>
-                                <option value="pending">Pendiente</option>
-                                <option value="in_progress">En Progreso</option>
-                                <option value="review">En Revisión</option>
-                                <option value="finished">Finalizado</option>
-                            </select>
+                                onChange={(val) => setFilterStatus(val as any)}
+                                options={statusFilterOptions}
+                                placeholder="Cualquier estado"
+                            />
                         </div>
                         <div>
                             <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5 uppercase">Desde</label>

@@ -3,6 +3,7 @@ import { supabase } from "@/lib/supabase"
 import type { Database } from "@/types/database.types"
 import { Plus, Check, X, Upload, FileText, Image as ImageIcon, Trash2, ExternalLink, Paperclip, Loader2 } from "lucide-react"
 import { useAuth } from "@/contexts/AuthContext"
+import { SearchableSelect, type SelectOption } from "@/components/ui/SearchableSelect"
 
 type Absence = Database["public"]["Tables"]["absences"]["Row"] & {
     profiles: { full_name: string } | null
@@ -19,6 +20,14 @@ export default function AbsencePage() {
 
     const [selectedFile, setSelectedFile] = useState<File | null>(null)
     const [filePreviewUrl, setFilePreviewUrl] = useState<string | null>(null)
+
+    const absenceTypeOptions: SelectOption[] = [
+        { value: "vacation", label: "Vacaciones" },
+        { value: "sickness", label: "Enfermedad / Certificado Médico" },
+        { value: "study", label: "Estudio" },
+        { value: "suspension", label: "Suspensión" },
+        { value: "other", label: "Otro" },
+    ]
 
     const [formData, setFormData] = useState({
         start_date: "",
@@ -293,18 +302,13 @@ export default function AbsencePage() {
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium dark:text-gray-300">Tipo</label>
-                                <select
+                                <label className="block text-sm font-medium dark:text-gray-300 mb-1">Tipo</label>
+                                <SearchableSelect
                                     value={formData.type}
-                                    onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                                    className="w-full rounded border p-2 dark:bg-slate-800 dark:border-slate-700 dark:text-white"
-                                >
-                                    <option value="vacation">Vacaciones</option>
-                                    <option value="sickness">Enfermedad / Certificado Médico</option>
-                                    <option value="study">Estudio</option>
-                                    <option value="suspension">Suspensión</option>
-                                    <option value="other">Otro</option>
-                                </select>
+                                    onChange={(val) => setFormData({ ...formData, type: val })}
+                                    options={absenceTypeOptions}
+                                    placeholder="Seleccionar tipo de ausencia"
+                                />
                             </div>
 
                             <div>

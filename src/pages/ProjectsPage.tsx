@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { supabase } from "@/lib/supabase"
 import type { Database } from "@/types/database.types"
 import { Plus, Briefcase, Calendar, Users, X, Pencil, Trash2 } from "lucide-react"
 import { useAuth } from "@/contexts/AuthContext"
+import { SearchableSelect, type SelectOption } from "@/components/ui/SearchableSelect"
 
 type Project = Database["public"]["Tables"]["projects"]["Row"] & {
     clients: Database["public"]["Tables"]["clients"]["Row"] | null
@@ -31,8 +32,16 @@ export default function ProjectsPage() {
         client_id: "",
         start_date: "",
         end_date: "",
-        description: "" // Fixed typo in state init
+        description: "" 
     })
+
+    const clientOptions = useMemo<SelectOption[]>(() => {
+        return clients.map(c => ({ value: c.id, label: c.name }))
+    }, [clients])
+
+    const employeeOptions = useMemo<SelectOption[]>(() => {
+        return employees.map(u => ({ value: u.id, label: u.full_name || "Sin nombre" }))
+    }, [employees])
 
     useEffect(() => {
         fetchProjects()
@@ -266,18 +275,15 @@ export default function ProjectsPage() {
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium dark:text-gray-300">Cliente</label>
-                                <select
+                                <label className="block text-sm font-medium dark:text-gray-300 mb-1">Cliente</label>
+                                <SearchableSelect
                                     required
                                     value={formData.client_id}
-                                    onChange={(e) => setFormData({ ...formData, client_id: e.target.value })}
-                                    className="w-full rounded border p-2 dark:bg-slate-800 dark:border-slate-700 dark:text-white"
-                                >
-                                    <option value="">Seleccionar Cliente</option>
-                                    {clients.map(c => (
-                                        <option key={c.id} value={c.id}>{c.name}</option>
-                                    ))}
-                                </select>
+                                    onChange={(val) => setFormData({ ...formData, client_id: val })}
+                                    options={clientOptions}
+                                    placeholder="Seleccionar Cliente"
+                                    searchPlaceholder="Buscar cliente..."
+                                />
                             </div>
 
                             <div>
@@ -343,18 +349,17 @@ export default function ProjectsPage() {
                         </div>
 
                         <form onSubmit={handleAssign} className="mb-6 flex gap-2">
-                            <select
-                                value={selectedEmployee}
-                                onChange={(e) => setSelectedEmployee(e.target.value)}
-                                className="flex-1 rounded border p-2 dark:bg-slate-800 dark:border-slate-700"
-                                required
-                            >
-                                <option value="">Select Employee...</option>
-                                {employees.map(u => (
-                                    <option key={u.id} value={u.id}>{u.full_name}</option>
-                                ))}
-                            </select>
-                            <button type="submit" className="rounded bg-blue-600 px-4 text-white hover:bg-blue-700">Add</button>
+                            <div className="flex-1">
+                                <SearchableSelect
+                                    required
+                                    value={selectedEmployee}
+                                    onChange={(val) => setSelectedEmployee(val)}
+                                    options={employeeOptions}
+                                    placeholder="Select Employee..."
+                                    searchPlaceholder="Buscar empleado..."
+                                />
+                            </div>
+                            <button type="submit" className="rounded bg-blue-600 px-4 text-white hover:bg-blue-700 font-medium text-sm">Add</button>
                         </form>
 
                         <div className="space-y-2">

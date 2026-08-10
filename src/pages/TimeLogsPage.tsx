@@ -17,6 +17,7 @@ import {
 import { es } from "date-fns/locale"
 import { ChevronLeft, ChevronRight, ChevronDown, Calendar as CalendarIcon, CheckCircle, Trash2, PiggyBank, Plus, Pencil, Clock } from "lucide-react"
 import { isNonWorkingDay } from "@/utils/holidays"
+import { SearchableSelect, type SelectOption } from "@/components/ui/SearchableSelect"
 
 type TimeLog = Database["public"]["Tables"]["time_logs"]["Row"] & {
     tasks: { title: string, projects: { name: string, client_id: string } | null } | null
@@ -79,6 +80,33 @@ export default function TimeLogsPage() {
 
         return { monthStart: start, monthEnd: end, monthDays: days, formattedMonth: formatted, currentMonthStr: monthStr }
     }, [currentDate])
+
+    const clientOptions = useMemo<SelectOption[]>(() => {
+        return clients.map(c => ({
+            value: c.id,
+            label: c.name
+        }))
+    }, [clients])
+
+    const taskOptions = useMemo<SelectOption[]>(() => {
+        return tasks.map(t => {
+            const isHeader = (t as any).isHeader
+            if (isHeader) {
+                return {
+                    value: t.id,
+                    label: `── ${t.title} ──`,
+                    isHeader: true,
+                    disabled: true
+                }
+            }
+            const isSubtask = !!t.parent_task_id
+            return {
+                value: t.id,
+                label: isSubtask ? `↳ ${t.title}` : t.title,
+                indent: isSubtask
+            }
+        })
+    }, [tasks])
 
     useEffect(() => {
         Promise.all([
@@ -654,53 +682,26 @@ export default function TimeLogsPage() {
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-sm font-medium text-slate-400 mb-1">Cliente</label>
-                                    <select
+                                    <SearchableSelect
                                         required
                                         value={formData.client_id}
-                                        onChange={(e) => setFormData({ ...formData, client_id: e.target.value, task_id: "" })}
-                                        className="w-full rounded-lg border border-slate-700 bg-slate-800 p-2.5 text-white outline-none focus:border-blue-500"
-                                    >
-                                        <option value="">Seleccionar cliente</option>
-                                        {clients.map(c => (
-                                            <option key={c.id} value={c.id}>{c.name}</option>
-                                        ))}
-                                    </select>
+                                        onChange={(val) => setFormData({ ...formData, client_id: val, task_id: "" })}
+                                        options={clientOptions}
+                                        placeholder="Seleccionar cliente"
+                                        searchPlaceholder="Buscar cliente..."
+                                    />
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-slate-400 mb-1">Tarea</label>
-                                    <select
+                                    <SearchableSelect
                                         required
                                         value={formData.task_id}
-                                        onChange={(e) => setFormData({ ...formData, task_id: e.target.value })}
-                                        className="w-full rounded-lg border border-slate-700 bg-slate-800 p-2.5 text-white outline-none focus:border-blue-500"
+                                        onChange={(val) => setFormData({ ...formData, task_id: val })}
+                                        options={taskOptions}
+                                        placeholder="Seleccionar tarea"
+                                        searchPlaceholder="Buscar tarea..."
                                         disabled={!formData.client_id}
-                                    >
-                                        <option value="">Seleccionar tarea</option>
-                                        {tasks.map(t => {
-                                            const isHeader = (t as any).isHeader
-                                            if (isHeader) {
-                                                return (
-                                                    <option
-                                                        key={t.id}
-                                                        disabled
-                                                        style={{ backgroundColor: '#334155', color: '#ffffff', fontWeight: 'bold' }}
-                                                    >
-                                                        ── {t.title} ──
-                                                    </option>
-                                                )
-                                            }
-                                            const isSubtask = !!t.parent_task_id
-                                            return (
-                                                <option
-                                                    key={t.id}
-                                                    value={t.id}
-                                                    style={{ paddingLeft: isSubtask ? '20px' : '0', backgroundColor: '#0f172a' }}
-                                                >
-                                                    {isSubtask ? `\u00A0\u00A0\u00A0↳ ${t.title}` : t.title}
-                                                </option>
-                                            )
-                                        })}
-                                    </select>
+                                    />
                                 </div>
                             </div>
 

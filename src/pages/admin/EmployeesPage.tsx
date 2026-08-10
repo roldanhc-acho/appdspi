@@ -2,10 +2,15 @@ import { useState, useEffect } from "react"
 import { supabase } from "@/lib/supabase"
 import type { Database } from "@/types/database.types"
 import { User, Shield, Search, X, ToggleLeft, ToggleRight } from "lucide-react"
+import { SearchableSelect, type SelectOption } from "@/components/ui/SearchableSelect"
 
 type Profile = Database["public"]["Tables"]["profiles"]["Row"] & { email?: string; is_active?: boolean }
 
 export default function EmployeesPage() {
+    const roleOptions: SelectOption[] = [
+        { value: "employee", label: "Empleado (Acceso Estándar)" },
+        { value: "admin", label: "Administrador (Acceso Completo)" },
+    ]
     const [employees, setEmployees] = useState<Profile[]>([])
     const [loading, setLoading] = useState(true)
     const [searchTerm, setSearchTerm] = useState("")
@@ -262,15 +267,13 @@ export default function EmployeesPage() {
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium dark:text-gray-300">Rol (Nivel de Acceso)</label>
-                                <select
+                                <label className="block text-sm font-medium dark:text-gray-300 mb-1">Rol (Nivel de Acceso)</label>
+                                <SearchableSelect
                                     value={editForm.role}
-                                    onChange={(e) => setEditForm({ ...editForm, role: e.target.value as any })}
-                                    className="w-full rounded border p-2 dark:bg-slate-800 dark:border-slate-700 dark:text-white"
-                                >
-                                    <option value="employee">Empleado (Acceso Estándar)</option>
-                                    <option value="admin">Administrador (Acceso Completo)</option>
-                                </select>
+                                    onChange={(val) => setEditForm({ ...editForm, role: val as any })}
+                                    options={roleOptions}
+                                    placeholder="Seleccionar rol"
+                                />
                                 <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                                     Los administradores pueden gestionar clientes, proyectos, usuarios y aprobar solicitudes.
                                 </p>

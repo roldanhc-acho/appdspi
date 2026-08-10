@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { supabase } from "@/lib/supabase"
 import { useAuth } from "@/contexts/AuthContext"
 import type { Database } from "@/types/database.types"
+import { SearchableSelect, type SelectOption } from "@/components/ui/SearchableSelect"
 import {
     Plus,
     Trash2,
@@ -39,6 +40,14 @@ export default function ProductiveHoursPage() {
         month: format(new Date(), "yyyy-MM"),
         hours: 0
     })
+
+    const employeeOptions = useMemo<SelectOption[]>(() => {
+        return employees.map(e => ({ value: e.id, label: e.full_name || "Sin nombre" }))
+    }, [employees])
+
+    const clientOptions = useMemo<SelectOption[]>(() => {
+        return clients.map(c => ({ value: c.id, label: c.name }))
+    }, [clients])
 
     useEffect(() => {
         fetchInitialData()
@@ -235,33 +244,27 @@ export default function ProductiveHoursPage() {
                             {/* Employee Select */}
                             <div className="space-y-2">
                                 <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider">Empleado</label>
-                                <select
+                                <SearchableSelect
                                     required
                                     value={formData.user_id}
-                                    onChange={(e) => setFormData({ ...formData, user_id: e.target.value })}
-                                    className="w-full rounded-xl border border-zinc-800 bg-zinc-900 p-3 text-white focus:outline-none focus:ring-2 focus:ring-primary/50"
-                                >
-                                    <option value="">Seleccionar empleado...</option>
-                                    {employees.map(e => (
-                                        <option key={e.id} value={e.id}>{e.full_name}</option>
-                                    ))}
-                                </select>
+                                    onChange={(val) => setFormData({ ...formData, user_id: val })}
+                                    options={employeeOptions}
+                                    placeholder="Seleccionar empleado..."
+                                    searchPlaceholder="Buscar empleado..."
+                                />
                             </div>
 
                             {/* Client Select */}
                             <div className="space-y-2">
                                 <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider">Empresa (Cliente)</label>
-                                <select
+                                <SearchableSelect
                                     required
                                     value={formData.client_id}
-                                    onChange={(e) => setFormData({ ...formData, client_id: e.target.value })}
-                                    className="w-full rounded-xl border border-zinc-800 bg-zinc-900 p-3 text-white focus:outline-none focus:ring-2 focus:ring-primary/50"
-                                >
-                                    <option value="">Seleccionar empresa...</option>
-                                    {clients.map(c => (
-                                        <option key={c.id} value={c.id}>{c.name}</option>
-                                    ))}
-                                </select>
+                                    onChange={(val) => setFormData({ ...formData, client_id: val })}
+                                    options={clientOptions}
+                                    placeholder="Seleccionar empresa..."
+                                    searchPlaceholder="Buscar empresa..."
+                                />
                             </div>
 
                             <div className="grid grid-cols-2 gap-4">
