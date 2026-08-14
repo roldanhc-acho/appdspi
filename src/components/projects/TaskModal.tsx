@@ -3,8 +3,8 @@ import { supabase } from "@/lib/supabase"
 import type { Database } from "@/types/database.types"
 import { Plus, X, Trash2, ChevronRight, Clock } from "lucide-react"
 import { parseISO, isBefore } from "date-fns"
-import { countWorkingDays } from "@/utils/holidays"
 import { formatDateForInput, prepareDateForSave } from "@/utils/dateUtils"
+import { useHolidays } from "@/contexts/HolidaysContext"
 import { SearchableSelect, type SelectOption } from "@/components/ui/SearchableSelect"
 
 
@@ -24,6 +24,7 @@ type TaskModalProps = {
 }
 
 export function TaskModal({ isOpen, onClose, onSuccess, initialData, projects = [], fixedProjectId, fixedClientId }: TaskModalProps) {
+    const { countWorkingDays } = useHolidays()
     const [formData, setFormData] = useState({
         id: "",
         title: "",

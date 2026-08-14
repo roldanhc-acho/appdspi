@@ -6,12 +6,11 @@ import {
     endOfMonth,
     addMonths,
     subMonths,
-    eachDayOfInterval,
-    isWeekend
+    eachDayOfInterval
 } from "date-fns"
 import { es } from "date-fns/locale"
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Users, Download, Loader2 } from "lucide-react"
-import { isNonWorkingDay } from "@/utils/holidays"
+import { useHolidays } from "@/contexts/HolidaysContext"
 
 type UserStats = {
     userId: string
@@ -24,6 +23,7 @@ type UserStats = {
 }
 
 export default function MonthlyReportPage() {
+    const { isNonWorkingDay, holidays } = useHolidays()
     const [currentDate, setCurrentDate] = useState(new Date())
     const [userStats, setUserStats] = useState<UserStats[]>([])
     const [loading, setLoading] = useState(true)
@@ -35,11 +35,11 @@ export default function MonthlyReportPage() {
 
     // Calculate working days in month
     const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd })
-    const workingDays = daysInMonth.filter(d => !isWeekend(d) && !isNonWorkingDay(d)).length
+    const workingDays = daysInMonth.filter(d => !isNonWorkingDay(d)).length
 
     useEffect(() => {
         fetchData()
-    }, [currentDate])
+    }, [currentDate, holidays])
 
     const fetchData = async () => {
         setLoading(true)
@@ -89,7 +89,7 @@ export default function MonthlyReportPage() {
                     daysInMonth.forEach(day => {
                         const dayStr = format(day, 'yyyy-MM-dd')
                         if (dayStr >= absence.start_date && dayStr <= absence.end_date) {
-                            if (!isWeekend(day) && !isNonWorkingDay(day)) {
+                            if (!isNonWorkingDay(day)) {
                                 absenceHours += userDailyHours
                             }
                         }

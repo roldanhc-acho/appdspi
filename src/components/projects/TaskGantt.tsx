@@ -4,7 +4,7 @@ import "gantt-task-react/dist/index.css"
 import type { Task } from "@/types/database.types"
 import { useMemo, useState, useRef, useEffect } from 'react'
 import { Maximize, Minimize } from "lucide-react"
-import { isNonWorkingDay } from '@/utils/holidays'
+import { useHolidays } from '@/contexts/HolidaysContext'
 import { startOfDay, addDays, isWeekend, subDays } from 'date-fns'
 
 type TaskGanttProps = {
@@ -13,6 +13,7 @@ type TaskGanttProps = {
 }
 
 export function TaskGantt({ tasks, onDateChange }: TaskGanttProps) {
+    const { isNonWorkingDay } = useHolidays()
     const [collapsedParents, setCollapsedParents] = useState<Set<string>>(new Set())
     const [view, setView] = useState<ViewMode>(ViewMode.Day)
     const [isFullScreen, setIsFullScreen] = useState(false)

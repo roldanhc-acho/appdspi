@@ -16,7 +16,7 @@ import {
 } from "date-fns"
 import { es } from "date-fns/locale"
 import { ChevronLeft, ChevronRight, ChevronDown, Calendar as CalendarIcon, CheckCircle, Trash2, PiggyBank, Plus, Pencil, Clock } from "lucide-react"
-import { isNonWorkingDay } from "@/utils/holidays"
+import { useHolidays } from "@/contexts/HolidaysContext"
 import { SearchableSelect, type SelectOption } from "@/components/ui/SearchableSelect"
 
 type TimeLog = Database["public"]["Tables"]["time_logs"]["Row"] & {
@@ -33,6 +33,7 @@ type HourBank = {
 }
 
 export default function TimeLogsPage() {
+    const { isNonWorkingDay } = useHolidays()
     const { profile } = useAuth()
     const [currentDate, setCurrentDate] = useState(new Date())
     const [logs, setLogs] = useState<TimeLog[]>([])

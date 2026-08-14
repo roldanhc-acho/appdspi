@@ -11,7 +11,8 @@ import {
     TrendingUp,
     FileText,
     BarChart3,
-    Database
+    Database,
+    CalendarOff
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -129,6 +130,12 @@ export function Sidebar() {
                                 label="Acumulado Banco"
                                 to="/admin/hour-bank"
                                 active={location.pathname.startsWith("/admin/hour-bank")}
+                            />
+                            <SidebarItem
+                                icon={CalendarOff}
+                                label="Días Feriados"
+                                to="/admin/holidays"
+                                active={location.pathname.startsWith("/admin/holidays")}
                             />
                             <SidebarItem
                                 icon={Users}
