@@ -357,78 +357,76 @@ export default function DashboardPage() {
                         </div>
                     </div>
                 )}
-            </div>
-
-            {/* Stats Grid */}
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            </div>            {/* Stats Grid - 2 columnas en móvil, 4 en desktop */}
+            <div className="grid grid-cols-2 gap-2.5 sm:gap-4 lg:grid-cols-4">
                 {/* Hours Today */}
-                <div className="rounded-xl border bg-white p-6 shadow-sm dark:bg-slate-900 dark:border-slate-800">
+                <div className="rounded-xl border bg-white p-3.5 sm:p-5 shadow-sm dark:bg-slate-900 dark:border-slate-800 transition-all hover:shadow-md">
                     <div className="flex items-start justify-between">
-                        <div>
-                            <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Horas Hoy</p>
-                            <h3 className="mt-2 text-3xl font-bold dark:text-white">{stats.hoursToday}</h3>
-                            <p className="text-xs text-slate-500">De 9 horas objetivo</p>
+                        <div className="min-w-0 flex-1">
+                            <p className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 truncate">Horas Hoy</p>
+                            <h3 className="mt-1 sm:mt-2 text-2xl sm:text-3xl font-bold dark:text-white tracking-tight">{stats.hoursToday}</h3>
+                            <p className="text-[10px] sm:text-xs text-slate-400 mt-0.5 truncate">De 9h objetivo</p>
                         </div>
-                        <div className="rounded-full bg-red-100 p-3 text-red-600 dark:bg-red-900/20 dark:text-red-400">
-                            <Clock className="h-5 w-5" />
+                        <div className="rounded-xl bg-red-50 p-2 sm:p-2.5 text-red-600 dark:bg-red-950/40 dark:text-red-400 shrink-0">
+                            <Clock className="h-4 w-4 sm:h-5 sm:w-5" />
                         </div>
                     </div>
                 </div>
 
                 {/* Active Projects */}
-                <div className="rounded-xl border bg-white p-6 shadow-sm dark:bg-slate-900 dark:border-slate-800">
+                <div className="rounded-xl border bg-white p-3.5 sm:p-5 shadow-sm dark:bg-slate-900 dark:border-slate-800 transition-all hover:shadow-md">
                     <div className="flex items-start justify-between">
-                        <div>
-                            <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Proyectos Activos</p>
-                            <h3 className="mt-2 text-3xl font-bold dark:text-white">{stats.activeProjects}</h3>
+                        <div className="min-w-0 flex-1">
+                            <p className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 truncate">Proyectos Activos</p>
+                            <h3 className="mt-1 sm:mt-2 text-2xl sm:text-3xl font-bold dark:text-white tracking-tight">{stats.activeProjects}</h3>
+                            <p className="text-[10px] sm:text-xs text-slate-400 mt-0.5 truncate">En curso</p>
                         </div>
-                        <div className="rounded-full bg-blue-100 p-3 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400">
-                            <Folder className="h-5 w-5" />
+                        <div className="rounded-xl bg-blue-50 p-2 sm:p-2.5 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400 shrink-0">
+                            <Folder className="h-4 w-4 sm:h-5 sm:w-5" />
                         </div>
                     </div>
                 </div>
 
                 {/* Completed Tasks */}
-                <div className="rounded-xl border bg-white p-6 shadow-sm dark:bg-slate-900 dark:border-slate-800">
+                <div className="rounded-xl border bg-white p-3.5 sm:p-5 shadow-sm dark:bg-slate-900 dark:border-slate-800 transition-all hover:shadow-md">
                     <div className="flex items-start justify-between">
-                        <div>
-                            <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Tareas Completadas</p>
-                            <h3 className="mt-2 text-3xl font-bold dark:text-white">{stats.completedTasks}</h3>
-                            <p className="text-xs text-slate-500">Este mes</p>
-                            <p className={`text-xs font-medium ${stats.completedTasksGrowth >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                {stats.completedTasksGrowth >= 0 ? '+' : ''}{stats.completedTasksGrowth}% vs mes anterior
+                        <div className="min-w-0 flex-1">
+                            <p className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 truncate">Tareas Listas</p>
+                            <h3 className="mt-1 sm:mt-2 text-2xl sm:text-3xl font-bold dark:text-white tracking-tight">{stats.completedTasks}</h3>
+                            <p className={`text-[10px] sm:text-xs font-medium mt-0.5 truncate ${stats.completedTasksGrowth >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
+                                {stats.completedTasksGrowth >= 0 ? '+' : ''}{stats.completedTasksGrowth}% este mes
                             </p>
                         </div>
-                        <div className="rounded-full bg-green-100 p-3 text-green-600 dark:bg-green-900/20 dark:text-green-400">
-                            <CheckCircle className="h-5 w-5" />
+                        <div className="rounded-xl bg-emerald-50 p-2 sm:p-2.5 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400 shrink-0">
+                            <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5" />
                         </div>
                     </div>
                 </div>
 
-                {/* Productive Hours (Admin Only) */}
+                {/* Productive Hours (Admin Only) o Banco de Horas */}
                 {isAdmin ? (
-                    <div className="rounded-xl border bg-white p-6 shadow-sm dark:bg-slate-900 dark:border-slate-800">
+                    <div className="rounded-xl border bg-white p-3.5 sm:p-5 shadow-sm dark:bg-slate-900 dark:border-slate-800 transition-all hover:shadow-md">
                         <div className="flex items-start justify-between">
-                            <div>
-                                <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Horas Productivas</p>
-                                <h3 className="mt-2 text-3xl font-bold text-green-500">+{stats.productiveHours}h</h3>
-                                <p className="text-xs text-slate-500">Asignadas este mes</p>
+                            <div className="min-w-0 flex-1">
+                                <p className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 truncate">Productivas</p>
+                                <h3 className="mt-1 sm:mt-2 text-2xl sm:text-3xl font-bold text-emerald-500 tracking-tight">+{stats.productiveHours}h</h3>
+                                <p className="text-[10px] sm:text-xs text-slate-400 mt-0.5 truncate">Asignadas mes</p>
                             </div>
-                            <div className="rounded-full bg-green-100 p-3 text-green-600 dark:bg-green-900/20 dark:text-green-400">
-                                <TrendingUp className="h-5 w-5" />
+                            <div className="rounded-xl bg-emerald-50 p-2 sm:p-2.5 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400 shrink-0">
+                                <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5" />
                             </div>
                         </div>
                     </div>
                 ) : (
-                    <div className="rounded-xl border bg-white p-6 shadow-sm dark:bg-slate-900 dark:border-slate-800">
+                    <div className="rounded-xl border bg-white p-3.5 sm:p-5 shadow-sm dark:bg-slate-900 dark:border-slate-800 transition-all hover:shadow-md">
                         <div className="flex items-start justify-between">
-                            <div>
-                                <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Banco de Horas</p>
-                                <h3 className="mt-2 text-3xl font-bold dark:text-white">+{stats.hourBank}</h3>
-                                <p className="text-xs text-slate-500">Horas acumuladas</p>
+                            <div className="min-w-0 flex-1">
+                                <p className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 truncate">Banco Horas</p>
+                                <h3 className="mt-1 sm:mt-2 text-2xl sm:text-3xl font-bold dark:text-white tracking-tight">+{stats.hourBank}</h3>
+                                <p className="text-[10px] sm:text-xs text-slate-400 mt-0.5 truncate">Acumuladas</p>
                             </div>
-                            <div className="rounded-full bg-yellow-100 p-3 text-yellow-600 dark:bg-yellow-900/20 dark:text-yellow-400">
-                                <Wallet className="h-5 w-5" />
+                            <div className="rounded-xl bg-amber-50 p-2 sm:p-2.5 text-amber-600 dark:bg-amber-950/40 dark:text-amber-400 shrink-0">
+                                <Wallet className="h-4 w-4 sm:h-5 sm:w-5" />
                             </div>
                         </div>
                     </div>

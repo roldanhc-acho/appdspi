@@ -337,8 +337,11 @@ export default function AgendaPage() {
                     )}
                 </div>
 
-                <div className="flex items-center gap-2">
-                    <div className="flex items-center gap-2 min-w-[170px]">
+                <div className="flex flex-wrap items-center gap-2">
+                    {/* Switch ON/OFF compacto de Avisos */}
+                    <PushNotificationToggle variant="switch" />
+
+                    <div className="flex items-center gap-2 min-w-[140px] sm:min-w-[170px]">
                         <SearchableSelect
                             value={filter}
                             onChange={(val) => setFilter(val as any)}
@@ -349,16 +352,13 @@ export default function AgendaPage() {
 
                     <button
                         onClick={() => openCreateModal()}
-                        className="flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 transition-colors"
+                        className="flex items-center gap-1.5 sm:gap-2 rounded-lg bg-primary px-3 sm:px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90 shadow-sm shadow-primary/25 transition-all active:scale-95 shrink-0"
                     >
                         <Plus className="h-4 w-4" />
-                        Nuevo Evento
+                        <span>Nuevo Evento</span>
                     </button>
                 </div>
             </div>
-
-            {/* Banner de recordatorios de agenda a las 8:00 AM */}
-            <PushNotificationToggle />
 
             {/* Calendar Navigation */}
             <div className="flex items-center justify-between rounded-xl border bg-white dark:bg-slate-900 dark:border-slate-800 p-4">
@@ -392,11 +392,12 @@ export default function AgendaPage() {
                 {/* Calendar Grid */}
                 <div className="flex-1 rounded-xl border bg-white dark:bg-slate-900 dark:border-slate-800 overflow-hidden">
                     {/* Weekday Headers */}
+                    {/* Weekday Headers */}
                     <div className="grid grid-cols-7 border-b dark:border-slate-800">
                         {WEEKDAY_NAMES.map((name) => (
                             <div
                                 key={name}
-                                className="py-3 text-center text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400"
+                                className="py-2 sm:py-3 text-center text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400"
                             >
                                 {name}
                             </div>
@@ -418,17 +419,17 @@ export default function AgendaPage() {
                                     key={idx}
                                     onClick={() => setSelectedDay(day)}
                                     className={`
-                                        min-h-[100px] border-b border-r dark:border-slate-800 p-1.5 cursor-pointer transition-all
+                                        min-h-[62px] sm:min-h-[100px] border-b border-r dark:border-slate-800 p-1 sm:p-1.5 cursor-pointer transition-all flex flex-col justify-between sm:justify-start
                                         ${!isCurrentMonth ? "bg-slate-50/50 dark:bg-slate-950/30" : ""}
-                                        ${isSelected ? "bg-indigo-50 dark:bg-indigo-950/30 ring-2 ring-inset ring-indigo-500" : "hover:bg-slate-50 dark:hover:bg-slate-800/50"}
+                                        ${isSelected ? "bg-indigo-50/90 dark:bg-indigo-950/40 ring-2 ring-inset ring-indigo-500 rounded-lg sm:rounded-none z-10" : "hover:bg-slate-50 dark:hover:bg-slate-800/50"}
                                     `}
                                 >
                                     {/* Day number */}
-                                    <div className="flex items-center justify-between mb-1">
+                                    <div className="flex items-center justify-between">
                                         <span
                                             className={`
-                                                inline-flex items-center justify-center h-7 w-7 rounded-full text-sm font-medium
-                                                ${isToday ? "bg-indigo-600 text-white" : ""}
+                                                inline-flex items-center justify-center h-6 w-6 sm:h-7 sm:w-7 rounded-full text-xs sm:text-sm font-medium
+                                                ${isToday ? "bg-indigo-600 text-white font-bold shadow-sm shadow-indigo-600/30" : ""}
                                                 ${!isToday && isCurrentMonth ? "text-slate-700 dark:text-slate-300" : ""}
                                                 ${!isToday && !isCurrentMonth ? "text-slate-400 dark:text-slate-600" : ""}
                                             `}
@@ -436,14 +437,33 @@ export default function AgendaPage() {
                                             {format(day, "d")}
                                         </span>
                                         {hasEvents && (
-                                            <span className="text-[10px] font-medium text-indigo-500 dark:text-indigo-400">
+                                            <span className="hidden sm:inline text-[10px] font-medium text-indigo-500 dark:text-indigo-400">
                                                 {dayEvents.length}
                                             </span>
                                         )}
                                     </div>
 
-                                    {/* Event pills */}
-                                    <div className="space-y-0.5">
+                                    {/* Indicadores en Móvil: Puntos de colores sutiles */}
+                                    {hasEvents && (
+                                        <div className="flex sm:hidden items-center justify-center gap-1 mt-1 pb-1">
+                                            {dayEvents.slice(0, 3).map((ev) => (
+                                                <span
+                                                    key={ev.id}
+                                                    className={`h-1.5 w-1.5 rounded-full ${
+                                                        ev.is_public ? "bg-emerald-500" : "bg-purple-500"
+                                                    }`}
+                                                />
+                                            ))}
+                                            {dayEvents.length > 3 && (
+                                                <span className="text-[9px] font-bold text-slate-400 leading-none">
+                                                    +
+                                                </span>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {/* Event pills en Desktop */}
+                                    <div className="hidden sm:block space-y-0.5 mt-1">
                                         {dayEvents.slice(0, 3).map((event) => (
                                             <div
                                                 key={event.id}
