@@ -8,7 +8,6 @@ export default function Login() {
     const [email, setEmail] = useState("")
     const [password, setPassword] = useState("")
     const [loading, setLoading] = useState(false)
-    const [isSignUp, setIsSignUp] = useState(false)
     const [message, setMessage] = useState("")
     const [isChangingPassword, setIsChangingPassword] = useState(false)
     const [confirmPassword, setConfirmPassword] = useState("")
@@ -38,22 +37,6 @@ export default function Login() {
                 setPassword("")
                 setConfirmPassword("")
                 setTimeout(() => setIsChangingPassword(false), 2000)
-            }
-        } else if (isSignUp) {
-            const { error } = await supabase.auth.signUp({
-                email,
-                password,
-                options: {
-                    data: {
-                        full_name: email.split("@")[0],
-                    },
-                },
-            })
-
-            if (error) {
-                setMessage(error.message)
-            } else {
-                setMessage("¡Revisa tu correo para confirmar tu cuenta!")
             }
         } else {
             const { error } = await supabase.auth.signInWithPassword({
@@ -102,40 +85,30 @@ export default function Login() {
             <div className="w-full lg:w-1/2 flex items-center justify-center bg-white p-8">
                 <div className="w-full max-w-md space-y-8">
                     <div className="text-center space-y-2">
-                        <h2 className="text-3xl font-bold text-slate-900">Bienvenido</h2>
-                        <p className="text-slate-500">Inicia sesión o crea una cuenta para continuar</p>
+                        <h2 className="text-3xl font-bold text-slate-900">
+                            {isChangingPassword ? "Cambiar Contraseña" : "Iniciar Sesión"}
+                        </h2>
+                        <p className="text-slate-500">
+                            {isChangingPassword 
+                                ? "Ingresa tu nueva contraseña para actualizarla" 
+                                : "Ingresa tus credenciales para acceder al sistema"}
+                        </p>
                     </div>
 
-                    {/* Tabs / Toggle */}
-                    {!isChangingPassword ? (
-                        <div className="bg-slate-100 p-1 rounded-lg grid grid-cols-2 gap-1 mb-8">
-                            <button
-                                onClick={() => { setIsSignUp(false); setMessage(""); }}
-                                className={`py-2 text-sm font-medium rounded-md transition-all ${!isSignUp ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
-                            >
-                                Iniciar Sesión
-                            </button>
-                            <button
-                                onClick={() => { setIsSignUp(true); setMessage(""); }}
-                                className={`py-2 text-sm font-medium rounded-md transition-all ${isSignUp ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
-                            >
-                                Registrarse
-                            </button>
-                        </div>
-                    ) : (
-                        <div className="flex items-center gap-4 mb-8">
+                    {isChangingPassword && (
+                        <div className="flex items-center gap-4 mb-2">
                             <button
                                 onClick={() => { setIsChangingPassword(false); setMessage(""); }}
                                 className="p-2 hover:bg-slate-100 rounded-full transition-colors"
                             >
                                 <ArrowLeft className="h-5 w-5 text-slate-600" />
                             </button>
-                            <h3 className="text-xl font-semibold text-slate-900">Cambiar Contraseña</h3>
+                            <span className="text-sm font-medium text-slate-600">Volver al inicio de sesión</span>
                         </div>
                     )}
 
                     {message && (
-                        <div className={`p-4 rounded-lg text-sm ${message.includes("confirmar") ? "bg-green-50 text-green-700 border border-green-200" : "bg-red-50 text-red-700 border border-red-200"}`}>
+                        <div className={`p-4 rounded-lg text-sm ${message.includes("éxito") ? "bg-green-50 text-green-700 border border-green-200" : "bg-red-50 text-red-700 border border-red-200"}`}>
                             {message}
                         </div>
                     )}
@@ -198,10 +171,10 @@ export default function Login() {
                             className={`w-full ${isChangingPassword ? 'bg-blue-600 hover:bg-blue-700 shadow-blue-600/20' : 'bg-[#E50914] hover:bg-[#b8070f] shadow-red-600/20'} text-white font-semibold py-2.5 rounded-lg transition-all transform active:scale-[0.98] disabled:opacity-70 disabled:pointer-events-none flex items-center justify-center gap-2 shadow-lg`}
                         >
                             {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-                            {isChangingPassword ? "Actualizar Contraseña" : (isSignUp ? "Registrarse" : "Iniciar Sesión")}
+                            {isChangingPassword ? "Actualizar Contraseña" : "Iniciar Sesión"}
                         </button>
 
-                        {!isChangingPassword && !isSignUp && session && (
+                        {!isChangingPassword && session && (
                             <button
                                 type="button"
                                 onClick={() => { setIsChangingPassword(true); setMessage(""); setPassword(""); }}

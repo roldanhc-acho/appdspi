@@ -1,0 +1,21 @@
+{
+  "name": "DSPI - Sistema de Gestión",
+  "short_name": "DSPI",
+  "description": "Sistema de gestión de proyectos, tareas y agenda DSPI",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#020617",
+  "theme_color": "#0f172a",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "/logo.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ]
+}

@@ -562,6 +562,92 @@ export type Database = {
                     },
                 ]
             }
+            push_subscriptions: {
+                Row: {
+                    id: string
+                    user_id: string
+                    endpoint: string
+                    p256dh: string
+                    auth: string
+                    user_agent: string | null
+                    created_at: string
+                    updated_at: string
+                }
+                Insert: {
+                    id?: string
+                    user_id: string
+                    endpoint: string
+                    p256dh: string
+                    auth: string
+                    user_agent?: string | null
+                    created_at?: string
+                    updated_at?: string
+                }
+                Update: {
+                    id?: string
+                    user_id?: string
+                    endpoint?: string
+                    p256dh?: string
+                    auth?: string
+                    user_agent?: string | null
+                    created_at?: string
+                    updated_at?: string
+                }
+                Relationships: [
+                    {
+                        foreignKeyName: "push_subscriptions_user_id_fkey"
+                        columns: ["user_id"]
+                        isOneToOne: false
+                        referencedRelation: "profiles"
+                        referencedColumns: ["id"]
+                    }
+                ]
+            }
+            push_notification_logs: {
+                Row: {
+                    id: string
+                    event_id: string
+                    user_id: string
+                    sent_for_date: string
+                    status: string
+                    error_message: string | null
+                    sent_at: string
+                }
+                Insert: {
+                    id?: string
+                    event_id: string
+                    user_id: string
+                    sent_for_date: string
+                    status?: string
+                    error_message?: string | null
+                    sent_at?: string
+                }
+                Update: {
+                    id?: string
+                    event_id?: string
+                    user_id?: string
+                    sent_for_date?: string
+                    status?: string
+                    error_message?: string | null
+                    sent_at?: string
+                }
+                Relationships: [
+                    {
+                        foreignKeyName: "push_notification_logs_event_id_fkey"
+                        columns: ["event_id"]
+                        isOneToOne: false
+                        referencedRelation: "events"
+                        referencedColumns: ["id"]
+                    },
+                    {
+                        foreignKeyName: "push_notification_logs_user_id_fkey"
+                        columns: ["user_id"]
+                        isOneToOne: false
+                        referencedRelation: "profiles"
+                        referencedColumns: ["id"]
+                    }
+                ]
+            }
         }
         Views: {
             [_ in never]: never
@@ -570,6 +656,33 @@ export type Database = {
             is_admin: {
                 Args: Record<PropertyKey, never>
                 Returns: boolean
+            }
+            get_agenda_reminders_for_date: {
+                Args: {
+                    target_date: string
+                }
+                Returns: {
+                    event_id: string
+                    event_title: string
+                    event_description: string | null
+                    event_time: string | null
+                    is_public: boolean
+                    target_user_id: string
+                    subscription_id: string
+                    endpoint: string
+                    p256dh: string
+                    auth: string
+                }[]
+            }
+            log_push_notification_attempt: {
+                Args: {
+                    p_event_id: string
+                    p_user_id: string
+                    p_sent_for_date: string
+                    p_status: string
+                    p_error_message?: string | null
+                }
+                Returns: void
             }
         }
         Enums: {

@@ -1,25 +1,27 @@
 import { useAuth } from "@/contexts/AuthContext"
 import { LogOut, User, Menu } from "lucide-react"
 import { ThemeToggle } from "@/components/ThemeToggle"
+import { PushNotificationToggle } from "@/components/notifications/PushNotificationToggle"
 
 export function Header({ onMenuClick }: { onMenuClick: () => void }) {
     const { profile, signOut } = useAuth()
 
     return (
-        <header className="flex h-16 items-center justify-between border-b bg-white px-4 dark:bg-slate-950 dark:border-slate-800 sm:px-6">
-            <div className="flex items-center gap-4">
+        <header className="flex h-16 items-center justify-between border-b bg-white px-3 sm:px-6 dark:bg-slate-950 dark:border-slate-800 flex-nowrap gap-2">
+            <div className="flex items-center gap-2 sm:gap-4 min-w-0">
                 <button
                     onClick={onMenuClick}
-                    className="text-slate-500 hover:text-slate-700 md:hidden dark:text-slate-400 dark:hover:text-slate-200"
+                    className="text-slate-500 hover:text-slate-700 md:hidden dark:text-slate-400 dark:hover:text-slate-200 shrink-0"
                 >
                     <Menu className="h-6 w-6" />
                 </button>
-                <h2 className="text-lg font-semibold md:text-xl">
+                <h2 className="text-base sm:text-lg md:text-xl font-semibold truncate dark:text-white">
                     Hola, {profile?.full_name?.split(" ")[0] || "Usuario"}
                 </h2>
             </div>
 
-            <div className="flex items-center gap-2 sm:gap-4">
+            <div className="flex items-center gap-1.5 sm:gap-4 shrink-0 flex-nowrap">
+                <PushNotificationToggle compact />
                 <ThemeToggle />
 
                 <div className="flex items-center gap-2 text-sm border-l pl-4 ml-2 dark:border-slate-800">

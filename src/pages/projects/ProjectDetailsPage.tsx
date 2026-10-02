@@ -81,21 +81,25 @@ export default function ProjectDetailsPage() {
             const tasksData_ = tasksData || []
             setTasks(tasksData_)
 
-            // Fetch Time Logs to calculate progress
-            const { data: logsData } = await supabase
-                .from("time_logs")
-                .select("task_id, hours_worked")
-                .in("task_id", tasksData_.map(t => t.id))
+            // Fetch Time Logs to calculate progress only if there are tasks
+            if (tasksData_.length > 0) {
+                const { data: logsData } = await supabase
+                    .from("time_logs")
+                    .select("task_id, hours_worked")
+                    .in("task_id", tasksData_.map(t => t.id))
 
-            if (logsData) {
-                const progressMap: Record<string, number> = {}
-                tasksData_.forEach(task => {
-                    const taskLogs = logsData.filter(l => l.task_id === task.id)
-                    const worked = taskLogs.reduce((acc, curr) => acc + (curr.hours_worked || 0), 0)
-                    const estimated = task.estimated_hours || 0
-                    progressMap[task.id] = estimated > 0 ? Math.min(Math.round((worked / estimated) * 100), 100) : 0
-                })
-                setTaskProgress(progressMap)
+                if (logsData) {
+                    const progressMap: Record<string, number> = {}
+                    tasksData_.forEach(task => {
+                        const taskLogs = logsData.filter(l => l.task_id === task.id)
+                        const worked = taskLogs.reduce((acc, curr) => acc + (curr.hours_worked || 0), 0)
+                        const estimated = task.estimated_hours || 0
+                        progressMap[task.id] = estimated > 0 ? Math.min(Math.round((worked / estimated) * 100), 100) : 0
+                    })
+                    setTaskProgress(progressMap)
+                }
+            } else {
+                setTaskProgress({})
             }
 
             // Get project team members from project_assignments (same query as ProjectsPage.tsx)
@@ -104,8 +108,9 @@ export default function ProjectDetailsPage() {
                 .select("*, profiles(*)")
                 .eq("project_id", id!)
 
-            console.log('[DEBUG] Team assignments data:', teamAssignments)
-            console.log('[DEBUG] Team assignments error:', teamError)
+            if (teamError) {
+                console.error("Error fetching team assignments:", teamError)
+            }
 
             if (teamAssignments && teamAssignments.length > 0) {
                 const teamUsers = teamAssignments
@@ -115,8 +120,9 @@ export default function ProjectDetailsPage() {
                         full_name: a.profiles.full_name || "Sin nombre",
                         avatar_url: a.profiles.avatar_url
                     }))
-                console.log('[DEBUG] Team users:', teamUsers)
                 setProjectUsers(teamUsers)
+            } else {
+                setProjectUsers([])
             }
 
         } catch (error) {

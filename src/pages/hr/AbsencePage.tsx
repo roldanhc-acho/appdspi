@@ -104,36 +104,23 @@ export default function AbsencePage() {
             let uploadedAttachmentUrl: string | null = null
 
             if (selectedFile) {
-                try {
-                    const fileExt = selectedFile.name.split('.').pop()
-                    const fileName = `${profile.id}_${Date.now()}.${fileExt}`
-                    const filePath = `certificates/${fileName}`
+                const fileExt = selectedFile.name.split('.').pop()
+                const fileName = `${profile.id}_${Date.now()}.${fileExt}`
+                const filePath = `certificates/${fileName}`
 
-                    const { data: uploadData, error: uploadError } = await supabase.storage
-                        .from("absences")
-                        .upload(filePath, selectedFile, { upsert: true })
+                const { data: uploadData, error: uploadError } = await supabase.storage
+                    .from("absences")
+                    .upload(filePath, selectedFile, { upsert: true })
 
-                    if (uploadError) {
-                        console.warn("Storage upload warning, using base64 fallback:", uploadError)
-                        uploadedAttachmentUrl = await new Promise<string>((resolve, reject) => {
-                            const reader = new FileReader()
-                            reader.onload = () => resolve(reader.result as string)
-                            reader.onerror = reject
-                            reader.readAsDataURL(selectedFile)
-                        })
-                    } else {
-                        const { data: publicUrlData } = supabase.storage.from("absences").getPublicUrl(uploadData.path)
-                        uploadedAttachmentUrl = publicUrlData.publicUrl
-                    }
-                } catch (err) {
-                    console.error("Error uploading file:", err)
-                    uploadedAttachmentUrl = await new Promise<string>((resolve) => {
-                        const reader = new FileReader()
-                        reader.onload = () => resolve(reader.result as string)
-                        reader.onerror = () => resolve("")
-                        reader.readAsDataURL(selectedFile)
-                    })
+                if (uploadError) {
+                    console.error("Storage upload error:", uploadError)
+                    alert("No se pudo subir el archivo adjunto al almacenamiento. Por favor verifica el formato/tamaño e intenta nuevamente.")
+                    setIsUploading(false)
+                    return
                 }
+
+                const { data: publicUrlData } = supabase.storage.from("absences").getPublicUrl(uploadData.path)
+                uploadedAttachmentUrl = publicUrlData.publicUrl
             }
 
             const { error } = await supabase.from("absences").insert([{

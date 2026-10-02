@@ -6,6 +6,7 @@ import { Plus, Globe, Lock, Trash2, X, Clock, Pencil, RefreshCw, Users, ChevronL
 import { SearchableSelect, type SelectOption } from "@/components/ui/SearchableSelect"
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth, isSameDay, addMonths, subMonths } from "date-fns"
 import { es } from "date-fns/locale"
+import { PushNotificationToggle } from "@/components/notifications/PushNotificationToggle"
 
 type Event = Database["public"]["Tables"]["events"]["Row"] & {
     recurrence?: string
@@ -355,6 +356,9 @@ export default function AgendaPage() {
                     </button>
                 </div>
             </div>
+
+            {/* Banner de recordatorios de agenda a las 8:00 AM */}
+            <PushNotificationToggle />
 
             {/* Calendar Navigation */}
             <div className="flex items-center justify-between rounded-xl border bg-white dark:bg-slate-900 dark:border-slate-800 p-4">

@@ -163,12 +163,7 @@ export default function DashboardPage() {
             }
 
             // 3. Fetch Projects (Filter by assignment if user selected)
-            let projectsQuery = supabase
-                .from("projects")
-                .select("id", { count: 'exact', head: true })
-                .eq("status", "active")
-
-            if (filterClient !== 'all') projectsQuery = projectsQuery.eq("client_id", filterClient)
+            let projectCount = 0
 
             if (targetUser) {
                 // If user selected, only count projects they are assigned to
@@ -178,10 +173,29 @@ export default function DashboardPage() {
                     .eq("user_id", targetUser)
 
                 const projectIds = assignedProjects?.map(p => p.project_id) || []
-                projectsQuery = projectsQuery.in("id", projectIds)
-            }
+                if (projectIds.length === 0) {
+                    projectCount = 0
+                } else {
+                    let projectsQuery = supabase
+                        .from("projects")
+                        .select("id", { count: 'exact', head: true })
+                        .eq("status", "active")
+                        .in("id", projectIds)
 
-            const { count: projectCount } = await projectsQuery
+                    if (filterClient !== 'all') projectsQuery = projectsQuery.eq("client_id", filterClient)
+                    const { count } = await projectsQuery
+                    projectCount = count || 0
+                }
+            } else {
+                let projectsQuery = supabase
+                    .from("projects")
+                    .select("id", { count: 'exact', head: true })
+                    .eq("status", "active")
+
+                if (filterClient !== 'all') projectsQuery = projectsQuery.eq("client_id", filterClient)
+                const { count } = await projectsQuery
+                projectCount = count || 0
+            }
 
             // 4. Fetch Productive Hours (Admin Only)
             let productiveHours: any[] = []

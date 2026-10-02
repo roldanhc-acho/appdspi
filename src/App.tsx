@@ -18,9 +18,7 @@ import MonthlyReportPage from "@/pages/admin/MonthlyReportPage"
 import HourBankReportPage from "@/pages/admin/HourBankReportPage"
 import HolidaysPage from "@/pages/admin/HolidaysPage"
 
-// Placeholder components
 import DashboardPage from "@/pages/DashboardPage"
-const AdminDashboard = () => <div>Admin Dashboard</div>
 
 function ProtectedRoute({ children, adminOnly = false }: { children: React.ReactNode; adminOnly?: boolean }) {
   const { session, profile, isLoading } = useAuth()
@@ -126,7 +124,7 @@ function App() {
                   path="admin"
                   element={
                     <ProtectedRoute adminOnly>
-                      <AdminDashboard />
+                      <Navigate to="/admin/records" replace />
                     </ProtectedRoute>
                   }
                 />

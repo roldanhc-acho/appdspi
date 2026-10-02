@@ -60,10 +60,6 @@ export default function MonthlyReportPage() {
             const absences = absencesRes.data
             const hourBanks = hourBanksRes.data
 
-            console.log("[MonthlyReport] Profiles:", profiles?.length, "Error:", profilesRes.error)
-            console.log("[MonthlyReport] TimeLogs:", timeLogs?.length, "Error:", timeLogsRes.error)
-            console.log("[MonthlyReport] Absences:", absences?.length, "Error:", absencesRes.error)
-            console.log("[MonthlyReport] HourBanks:", hourBanks?.length, "Error:", hourBanksRes.error)
 
             if (!profiles || profiles.length === 0) {
                 setUserStats([])

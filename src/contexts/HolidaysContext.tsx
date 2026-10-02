@@ -92,28 +92,34 @@ export function HolidaysProvider({ children }: { children: React.ReactNode }) {
     }, [fetchHolidays])
 
     const addHoliday = async (newHoliday: Omit<HolidayItem, "id">) => {
-        const id = `custom-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`
-        const itemToAdd: HolidayItem = {
-            ...newHoliday,
-            id,
-            is_custom: true,
-            created_at: new Date().toISOString()
-        }
+        let insertedId = `custom-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`
+        let createdAt = new Date().toISOString()
 
         // Try persisting to Supabase
         try {
-            await supabase.from("holidays").insert([{
-                id,
-                date: itemToAdd.date,
-                name: itemToAdd.name,
-                type: itemToAdd.type,
+            const { data, error } = await supabase.from("holidays").insert([{
+                date: newHoliday.date,
+                name: newHoliday.name,
+                type: newHoliday.type,
                 is_custom: true
-            }])
+            }]).select("id, created_at").maybeSingle()
+
+            if (!error && data?.id) {
+                insertedId = data.id
+                if (data.created_at) createdAt = data.created_at
+            }
         } catch (err) {
             console.warn("Could not insert holiday into Supabase table", err)
         }
 
-        const updated = [...holidays.filter(h => h.id !== id && h.date !== itemToAdd.date), itemToAdd]
+        const itemToAdd: HolidayItem = {
+            ...newHoliday,
+            id: insertedId,
+            is_custom: true,
+            created_at: createdAt
+        }
+
+        const updated = [...holidays.filter(h => h.id !== insertedId && h.date !== itemToAdd.date), itemToAdd]
             .sort((a, b) => a.date.localeCompare(b.date))
         updateLocalHolidays(updated)
     }
