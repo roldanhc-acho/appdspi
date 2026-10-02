@@ -72,7 +72,7 @@ export function usePushNotifications() {
       return false
     }
 
-    const vapidKey = import.meta.env.VITE_VAPID_PUBLIC_KEY
+    const vapidKey = import.meta.env.VITE_VAPID_PUBLIC_KEY || "BGqYn2lYU8LbjInLZXTCWJXqncSWE6QgcnuKFioZYGULDWzR4hbbBWxHdNHZFd9QsHTtGHtLK___3QijJ_eaoCU"
     if (!vapidKey) {
       setError("Falta configurar VITE_VAPID_PUBLIC_KEY en el entorno.")
       return false
