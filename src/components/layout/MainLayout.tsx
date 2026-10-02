@@ -21,11 +21,11 @@ export function MainLayout() {
                 onClose={() => setDrawerOpen(false)}
             />
 
-            <div className="flex flex-1 flex-col overflow-hidden relative">
+            <div className="flex flex-1 flex-col overflow-hidden relative min-w-0">
                 <Header onMenuClick={() => setDrawerOpen(true)} />
 
                 {/* Contenido principal con padding inferior para no solapar el dock flotante en móvil */}
-                <main className="flex-1 overflow-y-auto overflow-x-hidden p-3 sm:p-6 pb-24 md:pb-6 scroll-smooth">
+                <main className="flex-1 overflow-y-auto overflow-x-hidden p-3 sm:p-6 pb-24 md:pb-6 scroll-smooth w-full min-w-0">
                     <Outlet />
                 </main>
 

@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react"
+import { Link } from "react-router-dom"
 import { useAuth } from "@/contexts/AuthContext"
 import { supabase } from "@/lib/supabase"
 import type { Database } from "@/types/database.types"
@@ -304,38 +305,39 @@ export default function DashboardPage() {
 
     if (loading) return <div className="p-8">Cargando Panel...</div>
 
-    return (
-        <div className="space-y-6">
+    return (        <div className="space-y-4 sm:space-y-6 w-full max-w-full min-w-0">
             {/* Header / Intro */}
-            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                <div>
-                    <h1 className="text-2xl font-bold dark:text-white">¡Hola, {profile?.full_name?.split(' ')[0]}!</h1>
-                    <p className="text-slate-500 dark:text-slate-400">Aquí tienes un resumen de tu actividad.</p>
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between min-w-0">
+                <div className="min-w-0">
+                    <h1 className="text-xl sm:text-2xl font-bold dark:text-white truncate">¡Hola, {profile?.full_name?.split(' ')[0]}!</h1>
+                    <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">Aquí tienes un resumen de tu actividad.</p>
                 </div>
 
                 {/* Filters (Admin Only) */}
                 {isAdmin && (
-                    <div className="flex flex-wrap items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
                         {/* Date Range */}
-                        <div className="flex items-center gap-2 rounded-md border bg-white px-3 py-2 text-sm dark:bg-slate-800 dark:border-slate-700">
-                            <Calendar className="h-4 w-4 text-slate-500" />
-                            <input
-                                type="date"
-                                value={startDate}
-                                onChange={e => setStartDate(e.target.value)}
-                                className="bg-transparent outline-none dark:text-slate-300"
-                            />
-                            <span className="text-slate-400">-</span>
-                            <input
-                                type="date"
-                                value={endDate}
-                                onChange={e => setEndDate(e.target.value)}
-                                className="bg-transparent outline-none dark:text-slate-300"
-                            />
+                        <div className="flex items-center gap-1.5 sm:gap-2 rounded-md border bg-white px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm dark:bg-slate-800 dark:border-slate-700 w-full sm:w-auto">
+                            <Calendar className="h-4 w-4 text-slate-500 shrink-0" />
+                            <div className="flex items-center gap-1 sm:gap-2 flex-1 min-w-0">
+                                <input
+                                    type="date"
+                                    value={startDate}
+                                    onChange={e => setStartDate(e.target.value)}
+                                    className="bg-transparent outline-none dark:text-slate-300 w-full min-w-0 text-xs sm:text-sm"
+                                />
+                                <span className="text-slate-400 shrink-0">-</span>
+                                <input
+                                    type="date"
+                                    value={endDate}
+                                    onChange={e => setEndDate(e.target.value)}
+                                    className="bg-transparent outline-none dark:text-slate-300 w-full min-w-0 text-xs sm:text-sm"
+                                />
+                            </div>
                         </div>
 
                         {/* User Filter */}
-                        <div className="min-w-[180px]">
+                        <div className="w-full sm:w-[180px]">
                             <SearchableSelect
                                 value={filterUser}
                                 onChange={(val) => setFilterUser(val || "all")}
@@ -346,7 +348,7 @@ export default function DashboardPage() {
                         </div>
 
                         {/* Client Filter */}
-                        <div className="min-w-[180px]">
+                        <div className="w-full sm:w-[180px]">
                             <SearchableSelect
                                 value={filterClient}
                                 onChange={(val) => setFilterClient(val || "all")}
@@ -357,10 +359,12 @@ export default function DashboardPage() {
                         </div>
                     </div>
                 )}
-            </div>            {/* Stats Grid - 2 columnas en móvil, 4 en desktop */}
-            <div className="grid grid-cols-2 gap-2.5 sm:gap-4 lg:grid-cols-4">
+            </div>
+
+            {/* Stats Grid - 2 columnas en móvil, 4 en desktop */}
+            <div className="grid grid-cols-2 gap-2.5 sm:gap-4 lg:grid-cols-4 min-w-0">
                 {/* Hours Today */}
-                <div className="rounded-xl border bg-white p-3.5 sm:p-5 shadow-sm dark:bg-slate-900 dark:border-slate-800 transition-all hover:shadow-md">
+                <div className="rounded-xl border bg-white p-3.5 sm:p-5 shadow-sm dark:bg-slate-900 dark:border-slate-800 transition-all hover:shadow-md min-w-0">
                     <div className="flex items-start justify-between">
                         <div className="min-w-0 flex-1">
                             <p className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 truncate">Horas Hoy</p>
@@ -374,7 +378,7 @@ export default function DashboardPage() {
                 </div>
 
                 {/* Active Projects */}
-                <div className="rounded-xl border bg-white p-3.5 sm:p-5 shadow-sm dark:bg-slate-900 dark:border-slate-800 transition-all hover:shadow-md">
+                <div className="rounded-xl border bg-white p-3.5 sm:p-5 shadow-sm dark:bg-slate-900 dark:border-slate-800 transition-all hover:shadow-md min-w-0">
                     <div className="flex items-start justify-between">
                         <div className="min-w-0 flex-1">
                             <p className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 truncate">Proyectos Activos</p>
@@ -388,7 +392,7 @@ export default function DashboardPage() {
                 </div>
 
                 {/* Completed Tasks */}
-                <div className="rounded-xl border bg-white p-3.5 sm:p-5 shadow-sm dark:bg-slate-900 dark:border-slate-800 transition-all hover:shadow-md">
+                <div className="rounded-xl border bg-white p-3.5 sm:p-5 shadow-sm dark:bg-slate-900 dark:border-slate-800 transition-all hover:shadow-md min-w-0">
                     <div className="flex items-start justify-between">
                         <div className="min-w-0 flex-1">
                             <p className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 truncate">Tareas Listas</p>
@@ -405,7 +409,7 @@ export default function DashboardPage() {
 
                 {/* Productive Hours (Admin Only) o Banco de Horas */}
                 {isAdmin ? (
-                    <div className="rounded-xl border bg-white p-3.5 sm:p-5 shadow-sm dark:bg-slate-900 dark:border-slate-800 transition-all hover:shadow-md">
+                    <div className="rounded-xl border bg-white p-3.5 sm:p-5 shadow-sm dark:bg-slate-900 dark:border-slate-800 transition-all hover:shadow-md min-w-0">
                         <div className="flex items-start justify-between">
                             <div className="min-w-0 flex-1">
                                 <p className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 truncate">Productivas</p>
@@ -418,7 +422,7 @@ export default function DashboardPage() {
                         </div>
                     </div>
                 ) : (
-                    <div className="rounded-xl border bg-white p-3.5 sm:p-5 shadow-sm dark:bg-slate-900 dark:border-slate-800 transition-all hover:shadow-md">
+                    <div className="rounded-xl border bg-white p-3.5 sm:p-5 shadow-sm dark:bg-slate-900 dark:border-slate-800 transition-all hover:shadow-md min-w-0">
                         <div className="flex items-start justify-between">
                             <div className="min-w-0 flex-1">
                                 <p className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 truncate">Banco Horas</p>
@@ -433,25 +437,28 @@ export default function DashboardPage() {
                 )}
             </div>
 
-            <div className="grid gap-6 lg:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-2 min-w-0">
                 {/* Weekly Chart */}
-                <div className="rounded-xl border bg-white p-6 shadow-sm dark:bg-slate-900 dark:border-slate-800">
-                    <div className="mb-6 flex items-center justify-between">
-                        <h3 className="font-semibold dark:text-white">Horas esta Semana</h3>
-                        <div className="flex items-center gap-4 text-xs">
-                            <div className="flex items-center gap-1">
-                                <span className="h-2 w-2 rounded-full bg-red-500"></span>
-                                <span className="text-slate-500">Trabajadas</span>
+                <div className="rounded-xl border bg-white p-4 sm:p-6 shadow-sm dark:bg-slate-900 dark:border-slate-800 min-w-0 overflow-hidden">
+                    <div className="mb-4 sm:mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <h3 className="font-semibold text-sm sm:text-base dark:text-white">Horas esta Semana</h3>
+                        <div className="flex items-center gap-3 sm:gap-4 text-xs shrink-0 flex-wrap">
+                            <div className="flex items-center gap-1.5">
+                                <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0"></span>
+                                <span className="text-slate-500 dark:text-slate-400">≥ 9h objetivo</span>
                             </div>
-                            <div className="flex items-center gap-1">
-                                <span className="h-2 w-2 rounded-full bg-slate-700"></span>
-                                <span className="text-slate-500">Objetivo (9h)</span>
+                            <div className="flex items-center gap-1.5">
+                                <span className="h-2 w-2 rounded-full bg-red-500 shrink-0"></span>
+                                <span className="text-slate-500 dark:text-slate-400">&lt; 9h</span>
                             </div>
                         </div>
                     </div>
-                    <div className="h-64 w-full">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={weeklyData}>
+                    <div className="h-64 w-full min-w-0">
+                        <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                            <BarChart
+                                data={weeklyData}
+                                margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                            >
                                 <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
                                 <XAxis
                                     dataKey="name"
@@ -465,13 +472,14 @@ export default function DashboardPage() {
                                     fontSize={12}
                                     tickLine={false}
                                     axisLine={false}
-                                    domain={[0, 12]}
+                                    domain={[0, (dataMax: number) => Math.max(12, dataMax + 2)]}
                                 />
                                 <Tooltip
                                     contentStyle={{ backgroundColor: '#1e293b', border: 'none', borderRadius: '8px', color: '#fff' }}
                                     cursor={{ fill: '#334155', opacity: 0.2 }}
+                                    formatter={(value: any) => [`${value} hrs`, 'Horas']}
                                 />
-                                <Bar dataKey="hours" radius={[4, 4, 0, 0]} maxBarSize={40}>
+                                <Bar dataKey="hours" radius={[4, 4, 0, 0]} maxBarSize={36}>
                                     {weeklyData.map((entry, index) => (
                                         <Cell key={`cell-${index}`} fill={entry.hours >= 9 ? '#22c55e' : '#ef4444'} />
                                     ))}
@@ -482,31 +490,31 @@ export default function DashboardPage() {
                 </div>
 
                 {/* Assigned Tasks */}
-                <div className="rounded-xl border bg-white p-6 shadow-sm dark:bg-slate-900 dark:border-slate-800">
-                    <div className="mb-6 flex items-center justify-between">
-                        <h3 className="font-semibold dark:text-white">Tareas Asignadas</h3>
-                        <button className="text-xs font-medium text-red-500 hover:text-red-400">Ver todas</button>
+                <div className="rounded-xl border bg-white p-4 sm:p-6 shadow-sm dark:bg-slate-900 dark:border-slate-800 min-w-0 overflow-hidden">
+                    <div className="mb-4 sm:mb-6 flex items-center justify-between gap-2">
+                        <h3 className="font-semibold text-sm sm:text-base dark:text-white truncate">Tareas Asignadas</h3>
+                        <Link to="/tasks" className="text-xs font-medium text-red-500 hover:text-red-400 shrink-0">Ver todas</Link>
                     </div>
-                    <div className="space-y-4 max-h-[460px] overflow-y-auto pr-2 custom-scrollbar">
+                    <div className="space-y-3 sm:space-y-4 max-h-[460px] overflow-y-auto pr-1 sm:pr-2 custom-scrollbar min-w-0">
                         {tasks.map(task => {
                             const progress = taskProgress[task.id] || 0
                             const isOverdue = task.due_date && new Date(task.due_date) < new Date(new Date().setHours(0, 0, 0, 0)) && task.status !== 'finished' && task.status !== 'cancelled'
 
                             return (
-                                <div key={task.id} className={`group flex flex-col gap-2 rounded-lg border p-3 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors ${isOverdue ? 'border-red-500/50 bg-red-500/5' : ''}`}>
-                                    <div className="flex items-center justify-between">
+                                <div key={task.id} className={`group flex flex-col gap-2 rounded-lg border p-3 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors min-w-0 ${isOverdue ? 'border-red-500/50 bg-red-500/5' : ''}`}>
+                                    <div className="flex items-center justify-between gap-2 min-w-0">
                                         <div className="flex-1 min-w-0">
-                                            <div className="flex items-center gap-2">
-                                                <p className={`font-medium dark:text-white line-clamp-1 ${isOverdue ? 'text-red-500' : ''}`}>{task.title}</p>
+                                            <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+                                                <p className={`font-medium text-xs sm:text-sm dark:text-white truncate ${isOverdue ? 'text-red-500' : ''}`}>{task.title}</p>
                                                 {isOverdue && (
-                                                    <span className="flex items-center gap-1 text-[10px] font-bold text-red-500 bg-red-100 dark:bg-red-900/40 px-1.5 py-0.5 rounded uppercase animate-pulse">
+                                                    <span className="inline-flex items-center gap-1 text-[10px] font-bold text-red-500 bg-red-100 dark:bg-red-900/40 px-1.5 py-0.5 rounded uppercase animate-pulse shrink-0">
                                                         <AlertCircle className="h-3 w-3" /> Vencida
                                                     </span>
                                                 )}
                                             </div>
-                                            <p className="text-[10px] text-slate-500 uppercase">{task.projects?.name || 'Tarea General'}</p>
+                                            <p className="text-[10px] text-slate-500 uppercase truncate mt-0.5">{task.projects?.name || 'Tarea General'}</p>
                                         </div>
-                                        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <div className="flex items-center gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity shrink-0">
                                             <button
                                                 onClick={() => { setSelectedTask(task); setShowTaskModal(true); }}
                                                 className="p-1.5 rounded-md hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400"
@@ -516,20 +524,20 @@ export default function DashboardPage() {
                                         </div>
                                     </div>
 
-                                    <div className="flex items-center gap-3 mt-1">
-                                        <div className="flex-1 h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                                    <div className="flex items-center gap-2 sm:gap-3 mt-1 min-w-0">
+                                        <div className="flex-1 h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden min-w-0">
                                             <div
                                                 className={`h-full transition-all duration-500 ${isOverdue ? 'bg-red-500' : progress === 100 ? 'bg-green-500' : 'bg-blue-500'}`}
                                                 style={{ width: `${progress}%` }}
                                             />
                                         </div>
-                                        <span className={`text-[10px] font-bold min-w-[30px] ${isOverdue ? 'text-red-500' : 'text-slate-500'}`}>
+                                        <span className={`text-[10px] font-bold min-w-[28px] text-right shrink-0 ${isOverdue ? 'text-red-500' : 'text-slate-500'}`}>
                                             {progress}%
                                         </span>
-                                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold 
+                                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold shrink-0
                                                 ${task.status === 'in_progress' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
                                                 task.status === 'pending' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' :
-                                                    'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'} uppercase`}
+                                                    'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'} uppercase whitespace-nowrap`}
                                         >
                                             {task.status?.replace('_', ' ')}
                                         </span>
@@ -558,21 +566,21 @@ export default function DashboardPage() {
                 />
             )}
 
-            <div className="grid gap-6 lg:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-2 min-w-0">
                 {/* Recent Activity */}
-                <div className="rounded-xl border bg-white p-6 shadow-sm dark:bg-slate-900 dark:border-slate-800">
-                    <h3 className="mb-6 font-semibold dark:text-white">Actividad reciente</h3>
-                    <div className="space-y-6">
+                <div className="rounded-xl border bg-white p-4 sm:p-6 shadow-sm dark:bg-slate-900 dark:border-slate-800 min-w-0 overflow-hidden">
+                    <h3 className="mb-4 sm:mb-6 font-semibold text-sm sm:text-base dark:text-white">Actividad reciente</h3>
+                    <div className="space-y-4 sm:space-y-6 min-w-0">
                         {recentActivity.map((item, idx) => (
-                            <div key={idx} className="flex gap-4">
-                                <div className={`mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg 
+                            <div key={idx} className="flex gap-3 sm:gap-4 min-w-0">
+                                <div className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg 
                                     ${item.type === 'log' ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/20' : 'bg-green-100 text-green-600 dark:bg-green-900/20'}`}>
                                     {item.type === 'log' ? <Clock className="h-4 w-4" /> : <CheckCircle className="h-4 w-4" />}
                                 </div>
-                                <div>
-                                    <p className="font-medium dark:text-white">{item.title}</p>
-                                    <p className="text-sm text-slate-500">{item.desc}</p>
-                                    <p className="mt-1 text-xs text-slate-400">Hace {Math.abs(new Date().getHours() - new Date(item.time).getHours())} horas</p>
+                                <div className="min-w-0 flex-1">
+                                    <p className="font-medium text-xs sm:text-sm dark:text-white truncate">{item.title}</p>
+                                    <p className="text-xs sm:text-sm text-slate-500 break-words">{item.desc}</p>
+                                    <p className="mt-1 text-[10px] sm:text-xs text-slate-400">Hace {Math.abs(new Date().getHours() - new Date(item.time).getHours())} horas</p>
                                 </div>
                             </div>
                         ))}
@@ -580,14 +588,14 @@ export default function DashboardPage() {
                 </div>
 
                 {/* Upcoming Events */}
-                <div className="rounded-xl border bg-white p-6 shadow-sm dark:bg-slate-900 dark:border-slate-800">
-                    <div className="mb-6 flex items-center justify-between">
-                        <h3 className="font-semibold dark:text-white">Próximos Eventos</h3>
-                        <a href="/agenda" className="text-xs font-medium text-indigo-500 hover:text-indigo-400">
+                <div className="rounded-xl border bg-white p-4 sm:p-6 shadow-sm dark:bg-slate-900 dark:border-slate-800 min-w-0 overflow-hidden">
+                    <div className="mb-4 sm:mb-6 flex items-center justify-between gap-2">
+                        <h3 className="font-semibold text-sm sm:text-base dark:text-white truncate">Próximos Eventos</h3>
+                        <Link to="/agenda" className="text-xs font-medium text-indigo-500 hover:text-indigo-400 shrink-0">
                             Ver agenda
-                        </a>
+                        </Link>
                     </div>
-                    <div className="space-y-4">
+                    <div className="space-y-3 sm:space-y-4 min-w-0">
                         {upcomingEvents.length === 0 && (
                             <p className="text-center text-sm text-slate-500 py-4">No hay eventos próximos</p>
                         )}
@@ -605,20 +613,20 @@ export default function DashboardPage() {
                             const textColor = needsAttention ? 'text-red-500' : (event.is_public ? 'text-green-200' : 'text-purple-200')
 
                             return (
-                                <div key={event.id} className={`rounded-lg border ${colorClass} p-4 transition-colors`}>
-                                    <div className="flex items-start justify-between gap-3">
-                                        <div className="flex items-start gap-3">
-                                            <div className={`mt-1 h-2 w-2 shrink-0 rounded-full ${dotColor}`} />
-                                            <div>
-                                                <p className={`font-medium ${textColor} flex items-center gap-2`}>
-                                                    {event.title}
+                                <div key={event.id} className={`rounded-lg border ${colorClass} p-3.5 sm:p-4 transition-colors min-w-0`}>
+                                    <div className="flex items-start justify-between gap-2 sm:gap-3 min-w-0">
+                                        <div className="flex items-start gap-2.5 sm:gap-3 min-w-0 flex-1">
+                                            <div className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${dotColor}`} />
+                                            <div className="min-w-0 flex-1">
+                                                <p className={`font-medium text-xs sm:text-sm ${textColor} flex items-center gap-1.5 sm:gap-2 truncate`}>
+                                                    <span className="truncate">{event.title}</span>
                                                     {needsAttention && (
-                                                        <span className="text-[10px] font-bold bg-red-500 text-white px-1 py-0.5 rounded animate-pulse">
+                                                        <span className="text-[10px] font-bold bg-red-500 text-white px-1 py-0.5 rounded animate-pulse shrink-0">
                                                             VENCIDO
                                                         </span>
                                                     )}
                                                 </p>
-                                                <p className="text-xs text-slate-400">
+                                                <p className="text-[11px] sm:text-xs text-slate-400 mt-0.5 truncate">
                                                     {format(addDays(new Date(event.event_date + 'T12:00:00'), 0), "d 'de' MMMM", { locale: es })}
                                                     {event.event_time && ` - ${event.event_time.slice(0, 5)}`}
                                                 </p>
@@ -628,7 +636,7 @@ export default function DashboardPage() {
                                         {event.requires_confirmation && !event.is_confirmed && (
                                             <button
                                                 onClick={() => handleConfirmEvent(event.id)}
-                                                className="flex items-center gap-1 rounded bg-white/10 px-2 py-1 text-[10px] font-bold text-white hover:bg-white/20 transition-colors"
+                                                className="flex items-center gap-1 rounded bg-white/10 px-2 py-1 text-[10px] font-bold text-white hover:bg-white/20 transition-colors shrink-0"
                                                 title="Marcar como visto"
                                             >
                                                 <Check className="h-3 w-3" /> CONFIRMAR
