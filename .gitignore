@@ -26,3 +26,8 @@ dist-ssr
 *.sln
 *.sw?
 supabase/.temp/
+
+# Sensitive data and local credentials
+user_migration.sql
+*.seed.sql
+scripts/import_absences.sql

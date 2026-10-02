@@ -31,7 +31,7 @@ BEGIN
             'authenticated',
             'authenticated',
             'rocio.crego@dspi.com.ar',
-            extensions.crypt('DSPI2026', extensions.gen_salt('bf')),
+            extensions.crypt('<PASSWORD_TEMPORAL>', extensions.gen_salt('bf')),
             now(),
             '{"provider": "email", "providers": ["email"]}',
             '{"full_name": "ROCIO CREGO", "email": "rocio.crego@dspi.com.ar"}'::jsonb,
@@ -47,7 +47,7 @@ BEGIN
         UPDATE auth.users
         SET 
             email_confirmed_at = COALESCE(email_confirmed_at, now()),
-            encrypted_password = extensions.crypt('DSPI2026', extensions.gen_salt('bf')),
+            encrypted_password = extensions.crypt('<PASSWORD_TEMPORAL>', extensions.gen_salt('bf')),
             raw_user_meta_data = jsonb_build_object('full_name', 'ROCIO CREGO', 'email', 'rocio.crego@dspi.com.ar')
         WHERE id = u_id;
     END IF;

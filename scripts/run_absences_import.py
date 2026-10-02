@@ -4,13 +4,8 @@ en lotes de 50 filas contra Supabase via HTTP REST.
 """
 import re, json, urllib.request, urllib.error
 
-SUPABASE_URL = "https://ewlxcpgbavfvgnohtkuq.supabase.co"
-# Usamos la service-role key si está disponible, sino anon
-ANON_KEY = (
-    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9"
-    ".eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV3bHhjcGdiYXZmdmdub2h0a3VxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg3NTcyNDMsImV4cCI6MjA4NDMzMzI0M30"
-    ".d6zQpak_F9G12DG7_ZKdoYPyfPL8YQTbhnAQVltcHxs"
-)
+SUPABASE_URL = os.environ.get("VITE_SUPABASE_URL", "https://your-project-ref.supabase.co")
+ANON_KEY = os.environ.get("VITE_SUPABASE_ANON_KEY", "your-supabase-anon-key")
 
 import os, sys
 

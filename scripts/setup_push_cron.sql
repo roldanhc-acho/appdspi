@@ -26,7 +26,7 @@ SELECT cron.schedule(
     '0 11 * * *',
     $$
     SELECT net.http_post(
-        url := 'https://ewlxcpgbavfvgnohtkuq.supabase.co/functions/v1/send-agenda-reminders',
+        url := 'https://<TU_PROJECT_REF>.supabase.co/functions/v1/send-agenda-reminders',
         headers := jsonb_build_object(
             'Content-Type', 'application/json',
             'Authorization', 'Bearer <TU_SERVICE_ROLE_KEY>'

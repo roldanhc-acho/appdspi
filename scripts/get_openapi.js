@@ -1,5 +1,5 @@
-const supabaseUrl = "https://ewlxcpgbavfvgnohtkuq.supabase.co";
-const anonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV3bHhjcGdiYXZmdmdub2h0a3VxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg3NTcyNDMsImV4cCI6MjA4NDMzMzI0M30.d6zQpak_F9G12DG7_ZKdoYPyfPL8YQTbhnAQVltcHxs";
+const supabaseUrl = process.env.VITE_SUPABASE_URL || "https://your-project-ref.supabase.co";
+const anonKey = process.env.VITE_SUPABASE_ANON_KEY || "your-supabase-anon-key";
 
 async function getOpenApi() {
     const res = await fetch(`${supabaseUrl}/rest/v1/`, {
