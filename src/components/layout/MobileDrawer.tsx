@@ -15,7 +15,8 @@ import {
   CalendarOff,
   LogOut,
   User,
-  Shield
+  Shield,
+  Users
 } from "lucide-react"
 
 interface MobileDrawerProps {
@@ -149,10 +150,10 @@ export function MobileDrawer({ isOpen, onClose }: MobileDrawerProps) {
               </p>
               <div className="space-y-1">
                 <DrawerItem
-                  to="/admin/monthly-report"
+                  to="/admin/records"
                   icon={FileText}
-                  label="Reporte Mensual"
-                  active={isLinkActive("/admin/monthly-report")}
+                  label="Registro de Actividades"
+                  active={isLinkActive("/admin/records")}
                   onClick={handleLinkClick}
                 />
                 <DrawerItem
@@ -163,17 +164,17 @@ export function MobileDrawer({ isOpen, onClose }: MobileDrawerProps) {
                   onClick={handleLinkClick}
                 />
                 <DrawerItem
-                  to="/admin/hour-bank"
+                  to="/admin/monthly-report"
                   icon={BarChart3}
-                  label="Banco de Horas"
-                  active={isLinkActive("/admin/hour-bank")}
+                  label="Resumen Mensual"
+                  active={isLinkActive("/admin/monthly-report")}
                   onClick={handleLinkClick}
                 />
                 <DrawerItem
-                  to="/admin/records"
+                  to="/admin/hour-bank"
                   icon={Database}
-                  label="Registros de Horas"
-                  active={isLinkActive("/admin/records")}
+                  label="Acumulado Banco"
+                  active={isLinkActive("/admin/hour-bank")}
                   onClick={handleLinkClick}
                 />
                 <DrawerItem
@@ -181,6 +182,20 @@ export function MobileDrawer({ isOpen, onClose }: MobileDrawerProps) {
                   icon={CalendarOff}
                   label="Días Feriados"
                   active={isLinkActive("/admin/holidays")}
+                  onClick={handleLinkClick}
+                />
+                <DrawerItem
+                  to="/clients"
+                  icon={Users}
+                  label="Clientes"
+                  active={isLinkActive("/clients")}
+                  onClick={handleLinkClick}
+                />
+                <DrawerItem
+                  to="/employees"
+                  icon={Users}
+                  label="Empleados"
+                  active={isLinkActive("/employees")}
                   onClick={handleLinkClick}
                 />
               </div>
