@@ -47,6 +47,75 @@ serve(async (req: Request) => {
     // Cliente con Service Role para invocar funciones seguras
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
+    // Leer cuerpo opcional de la petición (para broadcasts o pruebas)
+    let requestBody: any = {};
+    try {
+      requestBody = await req.json();
+    } catch {
+      // cuerpo vacío o no-json (invocación regular por cron)
+    }
+
+    // MODALIDAD BROADCAST (envío masivo a todos los dispositivos registrados)
+    if (requestBody && requestBody.broadcast) {
+      console.log("[send-agenda-reminders] Iniciando envío BROADCAST");
+      const { data: allSubscriptions, error: subError } = await supabaseAdmin
+        .from("push_subscriptions")
+        .select("*");
+
+      if (subError) throw subError;
+
+      const title = requestBody.title || "DSPI - Actualización disponible 🚀";
+      const body = requestBody.body || "Hay una nueva versión disponible. Refresca la app para ver las mejoras.";
+      const url = requestBody.url || "/";
+
+      const payload = JSON.stringify({
+        title,
+        body,
+        url,
+      });
+
+      let sentCount = 0;
+      let failedCount = 0;
+      let expiredCount = 0;
+
+      for (const sub of (allSubscriptions || [])) {
+        const pushSubscription = {
+          endpoint: sub.endpoint,
+          keys: {
+            p256dh: sub.p256dh,
+            auth: sub.auth,
+          },
+        };
+
+        try {
+          await webpush.sendNotification(pushSubscription, payload, {
+            TTL: 86400,
+            urgency: "high",
+          });
+          sentCount++;
+        } catch (err: any) {
+          console.error(`Error enviando broadcast a sub ${sub.id}:`, err);
+          failedCount++;
+          if (err.statusCode === 404 || err.statusCode === 410) {
+            await supabaseAdmin.from("push_subscriptions").delete().eq("id", sub.id);
+            expiredCount++;
+          }
+        }
+      }
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          mode: "broadcast",
+          totalRecipients: (allSubscriptions || []).length,
+          sent: sentCount,
+          failed: failedCount,
+          expiredCleaned: expiredCount,
+        }),
+        { headers: { "Content-Type": "application/json" }, status: 200 }
+      );
+    }
+
     // Obtener la fecha actual en la zona horaria de Argentina (YYYY-MM-DD)
     const argentinaDate = new Intl.DateTimeFormat("en-CA", {
       timeZone: "America/Argentina/Buenos_Aires",
