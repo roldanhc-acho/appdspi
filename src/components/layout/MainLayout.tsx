@@ -25,7 +25,7 @@ export function MainLayout() {
                 <Header onMenuClick={() => setDrawerOpen(true)} />
 
                 {/* Contenido principal con padding inferior para no solapar el dock flotante en móvil */}
-                <main className="flex-1 overflow-y-auto p-3.5 sm:p-6 pb-20 md:pb-6 scroll-smooth">
+                <main className="flex-1 overflow-y-auto overflow-x-hidden p-3 sm:p-6 pb-24 md:pb-6 scroll-smooth">
                     <Outlet />
                 </main>
 

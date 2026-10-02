@@ -419,62 +419,78 @@ export default function TimeLogsPage() {
             <p className="text-slate-500">Registra tus horas trabajadas por tarea. Jornada estándar: 9 horas diarias.</p>
 
             {/* Calendar Controls & Stats */}
-            <div className="rounded-xl border bg-slate-900 p-6 text-white shadow-sm">
-                <div className="flex items-center justify-between mb-6">
+            <div className="rounded-xl border border-slate-800 bg-slate-900 p-3.5 sm:p-6 text-white shadow-sm overflow-hidden">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4 sm:mb-6">
                     <div className="flex items-center gap-2">
-                        <CalendarIcon className="h-5 w-5 text-slate-400" />
-                        <h2 className="text-lg font-semibold">Calendario mensual</h2>
+                        <CalendarIcon className="h-5 w-5 text-slate-400 shrink-0" />
+                        <h2 className="text-base sm:text-lg font-semibold">Calendario mensual</h2>
                     </div>
 
-                    <div className="flex items-center gap-2">
-                        <button onClick={handlePreviousMonth} className="p-2 rounded hover:bg-slate-800 border border-slate-700">
-                            <ChevronLeft className="h-4 w-4" />
-                        </button>
-                        <span className="font-medium px-2 capitalize min-w-[140px] text-center">
-                            {formattedMonth}
-                        </span>
-                        <button onClick={handleNextMonth} className="p-2 rounded hover:bg-slate-800 border border-slate-700">
-                            <ChevronRight className="h-4 w-4" />
-                        </button>
-                        <button onClick={handleToday} className="flex items-center gap-2 px-3 py-2 rounded border border-slate-700 hover:bg-slate-800 text-sm">
-                            <CalendarIcon className="h-4 w-4" />
-                            Hoy
+                    <div className="flex items-center justify-between sm:justify-end gap-1.5 sm:gap-2 w-full sm:w-auto">
+                        <div className="flex items-center gap-0.5 sm:gap-1 bg-slate-800/80 p-0.5 rounded-lg border border-slate-700/60">
+                            <button
+                                onClick={handlePreviousMonth}
+                                className="p-1.5 sm:p-2 rounded hover:bg-slate-700 text-slate-300 hover:text-white transition-colors"
+                                title="Mes anterior"
+                            >
+                                <ChevronLeft className="h-4 w-4" />
+                            </button>
+                            <span className="font-semibold px-1.5 sm:px-2 capitalize min-w-[110px] sm:min-w-[140px] text-center text-xs sm:text-sm text-white truncate">
+                                {formattedMonth}
+                            </span>
+                            <button
+                                onClick={handleNextMonth}
+                                className="p-1.5 sm:p-2 rounded hover:bg-slate-700 text-slate-300 hover:text-white transition-colors"
+                                title="Mes siguiente"
+                            >
+                                <ChevronRight className="h-4 w-4" />
+                            </button>
+                        </div>
+                        <button
+                            onClick={handleToday}
+                            className="flex items-center gap-1.5 px-3 py-1.5 sm:py-2 rounded-lg border border-slate-700 bg-slate-800/90 hover:bg-slate-700 text-xs sm:text-sm font-medium shrink-0 text-white transition-colors shadow-sm"
+                        >
+                            <CalendarIcon className="h-3.5 w-3.5 text-primary" />
+                            <span>Hoy</span>
                         </button>
                     </div>
                 </div>
 
-                <div className="flex items-center gap-6 text-sm mb-6">
-                    <div className="flex items-center gap-2">
-                        <span className="text-slate-400">Total mes:</span>
-                        <span className="font-bold">{monthStats.totalHours} horas</span>
+                {/* Stats / KPIs */}
+                <div className="grid grid-cols-3 gap-2 sm:flex sm:flex-wrap sm:items-center sm:gap-6 text-xs sm:text-sm mb-4 sm:mb-6 pt-3 sm:pt-0 border-t border-slate-800/80 sm:border-0">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-0.5 sm:gap-2 bg-slate-800/40 sm:bg-transparent p-2 sm:p-0 rounded-lg border border-slate-800/60 sm:border-0">
+                        <span className="text-slate-400 text-[11px] sm:text-sm">Total mes</span>
+                        <span className="font-bold text-white text-xs sm:text-sm">{monthStats.totalHours}h</span>
                     </div>
-                    <div className="flex items-center gap-2">
-                        <span className="text-slate-400">Productividad:</span>
-                        <span className={`font-bold ${monthStats.productivity >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                            {monthStats.productivity > 0 ? '+' : ''}{monthStats.productivity} horas
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-0.5 sm:gap-2 bg-slate-800/40 sm:bg-transparent p-2 sm:p-0 rounded-lg border border-slate-800/60 sm:border-0">
+                        <span className="text-slate-400 text-[11px] sm:text-sm">Productividad</span>
+                        <span className={`font-bold text-xs sm:text-sm ${monthStats.productivity >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                            {monthStats.productivity > 0 ? '+' : ''}{monthStats.productivity}h
                         </span>
                     </div>
-                    <div className="flex items-center gap-2">
-                        <span className="text-slate-400">Banco de horas:</span>
-                        <span className={`rounded-full border px-2 py-0.5 font-bold ${hourBankTotal >= 0 ? 'border-green-500/50 bg-green-500/10 text-green-500' : 'border-red-500/50 bg-red-500/10 text-red-500'}`}>
-                            {hourBankTotal > 0 ? '+' : ''}{hourBankTotal} horas
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-0.5 sm:gap-2 bg-slate-800/40 sm:bg-transparent p-2 sm:p-0 rounded-lg border border-slate-800/60 sm:border-0">
+                        <span className="text-slate-400 text-[11px] sm:text-sm">Banco horas</span>
+                        <span className={`rounded-full border px-1.5 sm:px-2 py-0.5 font-bold text-xs sm:text-sm w-fit ${hourBankTotal >= 0 ? 'border-green-500/50 bg-green-500/10 text-green-400' : 'border-red-500/50 bg-red-500/10 text-red-400'}`}>
+                            {hourBankTotal > 0 ? '+' : ''}{hourBankTotal}h
                         </span>
                     </div>
                     {monthStats.availableToSave > 0 && (
-                        <button
-                            onClick={() => { setBankHoursToSave(monthStats.availableToSave.toString()); setShowBankModal(true) }}
-                            className="flex items-center gap-2 px-3 py-1.5 rounded bg-green-600 hover:bg-green-700 text-sm font-medium transition-colors"
-                        >
-                            <PiggyBank className="h-4 w-4" />
-                            Pasar al banco ({monthStats.availableToSave}h disponibles)
-                        </button>
+                        <div className="col-span-3 sm:col-auto mt-1 sm:mt-0">
+                            <button
+                                onClick={() => { setBankHoursToSave(monthStats.availableToSave.toString()); setShowBankModal(true) }}
+                                className="w-full sm:w-auto flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-600 hover:bg-green-700 text-xs sm:text-sm font-medium transition-colors"
+                            >
+                                <PiggyBank className="h-4 w-4" />
+                                <span>Pasar al banco ({monthStats.availableToSave}h disponibles)</span>
+                            </button>
+                        </div>
                     )}
                 </div>
 
                 {/* Day Names Header */}
                 <div className="grid grid-cols-7 gap-1 mb-1">
                     {dayNames.map(day => (
-                        <div key={day} className="text-center text-xs font-medium text-slate-500 py-2">
+                        <div key={day} className="text-center text-[11px] sm:text-xs font-medium text-slate-500 py-1 sm:py-2">
                             {day}
                         </div>
                     ))}
@@ -506,9 +522,9 @@ export default function TimeLogsPage() {
                                             return (
                                                 <div
                                                     key={day.toISOString()}
-                                                    className={`relative flex flex-col rounded-lg border p-2 min-h-[90px] transition-all cursor-pointer hover:border-blue-500/50
-                                                        ${isExpanded ? 'border-blue-500 bg-blue-500/15 ring-1 ring-blue-500/30' : (isToday ? 'border-blue-500 bg-blue-500/10' : 'border-slate-800 bg-slate-800/50')}
-                                                        ${!isCurrentMonth ? 'opacity-40' : ''}
+                                                    className={`relative flex flex-col rounded-md sm:rounded-lg border p-1 sm:p-2 min-h-[64px] sm:min-h-[90px] transition-all cursor-pointer hover:border-primary/50 overflow-hidden
+                                                        ${isExpanded ? 'border-primary bg-primary/15 ring-1 ring-primary/40' : (isToday ? 'border-primary bg-primary/10' : 'border-slate-800/80 bg-slate-800/40')}
+                                                        ${!isCurrentMonth ? 'opacity-30' : ''}
                                                         ${isWknd ? 'border-l-2 border-l-red-500' : ''}
                                                         ${isHoliday ? 'border-l-2 border-l-orange-500' : ''}
                                                     `}
@@ -517,20 +533,20 @@ export default function TimeLogsPage() {
                                                         setExpandedDay(isExpanded ? null : dateStr)
                                                     }}
                                                 >
-                                                    <div className="flex items-start justify-between mb-1">
-                                                        <p className={`text-sm font-bold 
+                                                    <div className="flex items-start justify-between mb-0.5 sm:mb-1">
+                                                        <p className={`text-xs sm:text-sm font-bold 
                                                             ${isWknd ? 'text-red-400' : (isHoliday ? 'text-orange-400' : 'text-white')}
                                                         `}>
                                                             {format(day, 'd')}
                                                         </p>
                                                         {isCurrentMonth && (
-                                                            <div className="flex items-center gap-1">
-                                                                <div className="text-right text-xs">
+                                                            <div className="flex items-center gap-0.5">
+                                                                <div className="text-right text-[10px] sm:text-xs leading-none">
                                                                     <span className="text-white font-medium">{loggedHours}</span>
                                                                     <span className="text-slate-500">/{target}</span>
                                                                 </div>
                                                                 {isExpanded && (
-                                                                    <ChevronDown className="h-3 w-3 text-blue-400" />
+                                                                    <ChevronDown className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-primary" />
                                                                 )}
                                                             </div>
                                                         )}
@@ -542,19 +558,19 @@ export default function TimeLogsPage() {
                                                                 dayLogs.slice(0, 2).map(l => (
                                                                     <div
                                                                         key={l.id}
-                                                                        className="text-xs bg-slate-900/50 px-1 py-0.5 rounded truncate"
+                                                                        className="text-[9px] sm:text-xs bg-slate-900/70 px-1 py-0.5 rounded truncate"
                                                                     >
                                                                         {l.tasks?.title?.slice(0, 15) || 'Sin tarea'}
                                                                     </div>
                                                                 ))
                                                             ) : isAbsenceJustified ? (
-                                                                <div className="flex items-center gap-1 text-xs text-green-400">
-                                                                    <CheckCircle className="h-3 w-3" />
-                                                                    <span>Justif.</span>
+                                                                <div className="flex items-center gap-0.5 text-[9px] sm:text-xs text-green-400">
+                                                                    <CheckCircle className="h-2.5 w-2.5 sm:h-3 sm:w-3 shrink-0" />
+                                                                    <span className="truncate">Justif.</span>
                                                                 </div>
                                                             ) : null}
                                                             {dayLogs.length > 2 && (
-                                                                <span className="text-xs text-slate-500">+{dayLogs.length - 2} más</span>
+                                                                <span className="text-[9px] sm:text-xs text-slate-500">+{dayLogs.length - 2}</span>
                                                             )}
                                                         </div>
                                                     )}
@@ -565,16 +581,16 @@ export default function TimeLogsPage() {
 
                                     {/* Expanded Day Detail Panel */}
                                     {expandedDayInWeek && expandedDayStats && (
-                                        <div className="col-span-7 mt-1 mb-2 rounded-xl border border-blue-500/30 bg-slate-800/80 p-4 animate-in slide-in-from-top-2 duration-200">
+                                        <div className="col-span-7 mt-1.5 mb-2 rounded-xl border border-primary/30 bg-slate-850/90 p-3 sm:p-4 animate-in slide-in-from-top-2 duration-200">
                                             <div className="flex items-center justify-between mb-3">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="flex items-center gap-2">
-                                                        <CalendarIcon className="h-4 w-4 text-blue-400" />
-                                                        <h3 className="font-semibold text-white capitalize">
+                                                <div className="flex items-center gap-2 sm:gap-3">
+                                                    <div className="flex items-center gap-1.5 sm:gap-2">
+                                                        <CalendarIcon className="h-4 w-4 text-primary" />
+                                                        <h3 className="font-semibold text-white capitalize text-xs sm:text-base">
                                                             {format(expandedDayInWeek, 'EEEE d MMMM', { locale: es })}
                                                         </h3>
                                                     </div>
-                                                    <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-slate-700/50 text-xs">
+                                                    <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-700/50 text-[10px] sm:text-xs">
                                                         <Clock className="h-3 w-3 text-slate-400" />
                                                         <span className="text-white font-medium">{expandedDayStats.loggedHours}</span>
                                                         <span className="text-slate-500">/ {expandedDayStats.target}h</span>
@@ -585,10 +601,10 @@ export default function TimeLogsPage() {
                                                         e.stopPropagation()
                                                         handleOpenModal(format(expandedDayInWeek, 'yyyy-MM-dd'))
                                                     }}
-                                                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-xs font-medium text-white transition-colors"
+                                                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-primary hover:bg-primary/90 text-xs font-medium text-white transition-colors"
                                                 >
                                                     <Plus className="h-3.5 w-3.5" />
-                                                    Nuevo registro
+                                                    <span>Nuevo</span>
                                                 </button>
                                             </div>
 
@@ -597,25 +613,25 @@ export default function TimeLogsPage() {
                                                     {expandedDayStats.logs.map(l => (
                                                         <div
                                                             key={l.id}
-                                                            className="flex items-center justify-between gap-3 rounded-lg border border-slate-700/50 bg-slate-900/60 px-3 py-2.5 group hover:border-slate-600 transition-colors"
+                                                            className="flex items-center justify-between gap-3 rounded-lg border border-slate-700/50 bg-slate-900/60 px-3 py-2 sm:py-2.5 group hover:border-slate-600 transition-colors"
                                                         >
                                                             <div className="flex-1 min-w-0">
                                                                 <div className="flex items-center gap-2">
-                                                                    <span className="text-sm font-medium text-white truncate">
+                                                                    <span className="text-xs sm:text-sm font-medium text-white truncate">
                                                                         {l.tasks?.title || 'Sin tarea'}
                                                                     </span>
                                                                     {l.tasks?.projects?.name && (
-                                                                        <span className="text-xs px-1.5 py-0.5 rounded bg-slate-700/50 text-slate-400 shrink-0">
+                                                                        <span className="text-[10px] sm:text-xs px-1.5 py-0.5 rounded bg-slate-700/50 text-slate-400 shrink-0">
                                                                             {l.tasks.projects.name}
                                                                         </span>
                                                                     )}
                                                                 </div>
                                                                 {l.notes && (
-                                                                    <p className="text-xs text-slate-500 mt-0.5 truncate">{l.notes}</p>
+                                                                    <p className="text-[10px] sm:text-xs text-slate-500 mt-0.5 truncate">{l.notes}</p>
                                                                 )}
                                                             </div>
                                                             <div className="flex items-center gap-2 shrink-0">
-                                                                <span className="text-sm font-bold text-blue-400 min-w-[40px] text-right">
+                                                                <span className="text-xs sm:text-sm font-bold text-primary min-w-[36px] text-right">
                                                                     {l.hours_worked}h
                                                                 </span>
                                                                 <button
@@ -623,7 +639,7 @@ export default function TimeLogsPage() {
                                                                         e.stopPropagation()
                                                                         handleOpenModal(undefined, l)
                                                                     }}
-                                                                    className="p-1.5 rounded-md text-slate-500 hover:text-blue-400 hover:bg-blue-500/10 opacity-0 group-hover:opacity-100 transition-all"
+                                                                    className="p-1.5 rounded-md text-slate-400 hover:text-white hover:bg-slate-700 transition-all"
                                                                     title="Editar registro"
                                                                 >
                                                                     <Pencil className="h-3.5 w-3.5" />
@@ -633,12 +649,12 @@ export default function TimeLogsPage() {
                                                     ))}
                                                 </div>
                                             ) : expandedDayStats.isAbsenceJustified ? (
-                                                <div className="flex items-center gap-2 text-sm text-green-400 py-2">
+                                                <div className="flex items-center gap-2 text-xs sm:text-sm text-green-400 py-1">
                                                     <CheckCircle className="h-4 w-4" />
                                                     <span>Ausencia justificada</span>
                                                 </div>
                                             ) : (
-                                                <p className="text-sm text-slate-500 py-2">No hay registros para este día.</p>
+                                                <p className="text-xs sm:text-sm text-slate-500 py-1">No hay registros para este día.</p>
                                             )}
                                         </div>
                                     )}
