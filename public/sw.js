@@ -9,6 +9,16 @@ self.addEventListener("activate", (event) => {
   event.waitUntil(self.clients.claim());
 });
 
+// Handler fetch para cumplimiento de criterios PWA instalable en navegadores móviles (Chrome/Edge)
+self.addEventListener("fetch", (event) => {
+  // Manejo de peticiones de red
+  if (event.request.method === "GET") {
+    event.respondWith(
+      fetch(event.request).catch(() => caches.match(event.request))
+    );
+  }
+});
+
 self.addEventListener("push", (event) => {
   if (!event.data) return;
 
@@ -28,8 +38,8 @@ self.addEventListener("push", (event) => {
 
   const options = {
     body: payload.body,
-    icon: "/favicon.svg",
-    badge: "/favicon.svg",
+    icon: "/icon-192.png",
+    badge: "/icon-192.png",
     vibrate: [200, 100, 200],
     tag: payload.eventId ? `agenda-event-${payload.eventId}` : "agenda-general",
     renotify: true,
