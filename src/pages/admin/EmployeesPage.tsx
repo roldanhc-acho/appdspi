@@ -18,6 +18,7 @@ export default function EmployeesPage() {
     // Edit State
     const [editingUser, setEditingUser] = useState<Profile | null>(null)
     const [editForm, setEditForm] = useState({
+        full_name: "",
         department: "",
         hourly_rate: "",
         role: "employee" as "admin" | "employee",
@@ -49,6 +50,7 @@ export default function EmployeesPage() {
     const openEditModal = (user: Profile) => {
         setEditingUser(user)
         setEditForm({
+            full_name: user.full_name || "",
             department: user.department || "",
             hourly_rate: user.hourly_rate?.toString() || "",
             role: user.role || "employee",
@@ -64,6 +66,7 @@ export default function EmployeesPage() {
 
         try {
             const { error } = await supabase.from("profiles").update({
+                full_name: editForm.full_name.trim() || editingUser.full_name,
                 department: editForm.department,
                 hourly_rate: editForm.hourly_rate ? parseFloat(editForm.hourly_rate) : null,
                 role: editForm.role,
@@ -211,12 +214,24 @@ export default function EmployeesPage() {
                                 <User className="h-5 w-5 text-slate-500 dark:text-slate-300" />
                             </div>
                             <div>
-                                <p className="font-bold dark:text-white">{editingUser.full_name}</p>
+                                <p className="font-bold dark:text-white">{editForm.full_name || editingUser.full_name}</p>
                                 <p className="text-xs text-slate-500 dark:text-slate-400">Actualizando perfil y acceso</p>
                             </div>
                         </div>
 
                         <form onSubmit={handleUpdateUser} className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium dark:text-gray-300">Nombre Completo</label>
+                                <input
+                                    type="text"
+                                    required
+                                    value={editForm.full_name}
+                                    onChange={(e) => setEditForm({ ...editForm, full_name: e.target.value })}
+                                    className="w-full rounded border p-2 dark:bg-slate-800 dark:border-slate-700 dark:text-white"
+                                    placeholder="ej. Juan Pérez"
+                                />
+                            </div>
+
                             <div>
                                 <label className="block text-sm font-medium dark:text-gray-300">Email</label>
                                 <input
