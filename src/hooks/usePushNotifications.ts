@@ -187,6 +187,81 @@ export function usePushNotifications() {
     }
   }, [user])
 
+  // Enviar una notificación de prueba al dispositivo actual
+  const sendTestNotification = useCallback(async (): Promise<{ success: boolean; message: string }> => {
+    try {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+
+      const res = await fetch(`${supabaseUrl}/functions/v1/send-agenda-reminders`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${supabaseAnonKey}`,
+          "apikey": supabaseAnonKey,
+        },
+        body: JSON.stringify({
+          broadcast: true,
+          title: "DSPI - Notificación de prueba 🔔",
+          body: "¡Tus notificaciones de agenda están funcionando correctamente!",
+          url: "/agenda",
+        }),
+      })
+
+      const data = await res.json()
+      if (!res.ok) {
+        throw new Error(data.message || "No se pudo enviar la notificación de prueba.")
+      }
+
+      return {
+        success: true,
+        message: "Notificación de prueba enviada. Deberías verla en tu pantalla en instantes.",
+      }
+    } catch (err: any) {
+      console.error("Error al enviar notificación de prueba:", err)
+      return {
+        success: false,
+        message: err.message || "Error al enviar la prueba de notificación.",
+      }
+    }
+  }, [])
+
+  // Disparar manualmente los recordatorios de hoy (útil para admins o pruebas de agenda)
+  const triggerTodayReminders = useCallback(async (): Promise<{ success: boolean; message: string; count?: number }> => {
+    try {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+
+      const res = await fetch(`${supabaseUrl}/functions/v1/send-agenda-reminders`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${supabaseAnonKey}`,
+          "apikey": supabaseAnonKey,
+        },
+        body: JSON.stringify({}),
+      })
+
+      const data = await res.json()
+      if (!res.ok) {
+        throw new Error(data.message || "Error al procesar recordatorios de hoy.")
+      }
+
+      const count = data.sentCount || 0
+      return {
+        success: true,
+        message: data.message || `Recordatorios procesados (${count} enviados).`,
+        count,
+      }
+    } catch (err: any) {
+      console.error("Error al disparar recordatorios:", err)
+      return {
+        success: false,
+        message: err.message || "Error al procesar recordatorios.",
+      }
+    }
+  }, [])
+
   return {
     isSupported,
     permission,
@@ -195,5 +270,8 @@ export function usePushNotifications() {
     error,
     subscribe,
     unsubscribe,
+    sendTestNotification,
+    triggerTodayReminders,
   }
 }
+

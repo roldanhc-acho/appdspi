@@ -1,5 +1,6 @@
 // Supabase Edge Function: send-agenda-reminders
 // Se ejecuta diariamente a las 8:00 AM (hora Argentina) invocada por pg_cron
+// o bajo demanda desde la app para pruebas de dispositivo y reintentos.
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
@@ -19,7 +20,7 @@ interface ReminderRow {
 }
 
 serve(async (req: Request) => {
-  // Manejo de preflight CORS si fuera necesario
+  // Manejo de preflight CORS
   if (req.method === "OPTIONS") {
     return new Response("ok", {
       headers: {
@@ -47,7 +48,7 @@ serve(async (req: Request) => {
     // Cliente con Service Role para invocar funciones seguras
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Leer cuerpo opcional de la petición (para broadcasts o pruebas)
+    // Leer cuerpo opcional de la petición
     let requestBody: any = {};
     try {
       requestBody = await req.json();
@@ -55,7 +56,95 @@ serve(async (req: Request) => {
       // cuerpo vacío o no-json (invocación regular por cron)
     }
 
-    // MODALIDAD BROADCAST (envío masivo a todos los dispositivos registrados)
+    // =========================================================================
+    // 1. MODO PRUEBA DE DISPOSITIVO (Envío inmediato a un usuario o dispositivo)
+    // =========================================================================
+    if (requestBody && requestBody.action === "test_device") {
+      const targetUserId = requestBody.user_id;
+      let query = supabaseAdmin.from("push_subscriptions").select("*");
+      if (targetUserId) {
+        query = query.eq("user_id", targetUserId);
+      } else if (requestBody.endpoint) {
+        query = query.eq("endpoint", requestBody.endpoint);
+      }
+
+      const { data: subs, error: subErr } = await query;
+      if (subErr) throw subErr;
+
+      if (!subs || subs.length === 0) {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            message: "No se encontró suscripción push registrada para este usuario en la base de datos. Asegúrate de activar el switch de Avisos primero.",
+          }),
+          {
+            headers: {
+              "Content-Type": "application/json",
+              "Access-Control-Allow-Origin": "*",
+            },
+            status: 404,
+          }
+        );
+      }
+
+      const title = requestBody.title || "DSPI - Prueba de Notificación 🔔";
+      const body = requestBody.body || "¡Tu dispositivo está correctamente conectado y listo para recibir avisos de Agenda!";
+      const payload = JSON.stringify({
+        title,
+        body,
+        url: "/agenda",
+        test: true,
+      });
+
+      let sentCount = 0;
+      let failedCount = 0;
+
+      for (const sub of subs) {
+        const pushSubscription = {
+          endpoint: sub.endpoint,
+          keys: {
+            p256dh: sub.p256dh,
+            auth: sub.auth,
+          },
+        };
+
+        try {
+          await webpush.sendNotification(pushSubscription, payload, {
+            TTL: 3600,
+            urgency: "high",
+          });
+          sentCount++;
+        } catch (err: any) {
+          console.error(`Error enviando test push a sub ${sub.id}:`, err);
+          failedCount++;
+          if (err.statusCode === 404 || err.statusCode === 410) {
+            await supabaseAdmin.from("push_subscriptions").delete().eq("id", sub.id);
+          }
+        }
+      }
+
+      return new Response(
+        JSON.stringify({
+          success: sentCount > 0,
+          mode: "test_device",
+          sent: sentCount,
+          failed: failedCount,
+          totalSubscribedDevices: subs.length,
+          message: sentCount > 0 ? "Notificación de prueba enviada con éxito." : "Error al enviar la notificación.",
+        }),
+        {
+          headers: {
+            "Content-Type": "application/json",
+            "Access-Control-Allow-Origin": "*",
+          },
+          status: 200,
+        }
+      );
+    }
+
+    // =========================================================================
+    // 2. MODALIDAD BROADCAST (envío masivo a todos los dispositivos registrados)
+    // =========================================================================
     if (requestBody && requestBody.broadcast) {
       console.log("[send-agenda-reminders] Iniciando envío BROADCAST");
       const { data: allSubscriptions, error: subError } = await supabaseAdmin
@@ -112,21 +201,37 @@ serve(async (req: Request) => {
           failed: failedCount,
           expiredCleaned: expiredCount,
         }),
-        { headers: { "Content-Type": "application/json" }, status: 200 }
+        {
+          headers: {
+            "Content-Type": "application/json",
+            "Access-Control-Allow-Origin": "*",
+          },
+          status: 200,
+        }
       );
     }
 
-    // Obtener la fecha actual en la zona horaria de Argentina (YYYY-MM-DD)
-    const argentinaDate = new Intl.DateTimeFormat("en-CA", {
+    // =========================================================================
+    // 3. MODO RECORDATORIOS DIARIOS DE AGENDA (Cron regular o Forzado manual)
+    // =========================================================================
+    const argentinaDate = requestBody?.target_date || new Intl.DateTimeFormat("en-CA", {
       timeZone: "America/Argentina/Buenos_Aires",
       year: "numeric",
       month: "2-digit",
       day: "2-digit",
     }).format(new Date());
 
-    console.log(`[send-agenda-reminders] Iniciando recordatorios para fecha: ${argentinaDate}`);
+    const isForceRun = requestBody && (requestBody.action === "force_today" || requestBody.force === true);
 
-    // Consultar recordatorios pendientes con seguridad estricta
+    // Si es ejecución forzada con reenvío, limpiar logs de hoy para permitir reenvío
+    if (isForceRun && requestBody.ignore_logs) {
+      console.log(`[send-agenda-reminders] Limpiando logs previos para forzar reenvío en fecha: ${argentinaDate}`);
+      await supabaseAdmin.from("push_notification_logs").delete().eq("sent_for_date", argentinaDate);
+    }
+
+    console.log(`[send-agenda-reminders] Iniciando recordatorios para fecha: ${argentinaDate} (isForceRun: ${Boolean(isForceRun)})`);
+
+    // Consultar recordatorios pendientes
     const { data: reminders, error: rpcError } = await supabaseAdmin.rpc(
       "get_agenda_reminders_for_date",
       { target_date: argentinaDate }
@@ -142,8 +247,19 @@ serve(async (req: Request) => {
 
     if (rows.length === 0) {
       return new Response(
-        JSON.stringify({ success: true, message: "No hay recordatorios pendientes para hoy.", sentCount: 0 }),
-        { headers: { "Content-Type": "application/json" }, status: 200 }
+        JSON.stringify({
+          success: true,
+          message: "No hay recordatorios pendientes para enviar en la fecha indicada.",
+          date: argentinaDate,
+          sentCount: 0,
+        }),
+        {
+          headers: {
+            "Content-Type": "application/json",
+            "Access-Control-Allow-Origin": "*",
+          },
+          status: 200,
+        }
       );
     }
 
@@ -161,9 +277,9 @@ serve(async (req: Request) => {
       };
 
       // Formatear texto del mensaje
-      const timePrefix = row.event_time ? `⏰ ${row.event_time} hs` : "🗓️ Hoy";
+      const timePrefix = row.event_time ? `⏰ ${row.event_time.slice(0, 5)} hs` : "🗓️ Hoy";
       const scopePrefix = row.is_public ? "Evento público" : "Evento privado";
-      
+
       const title = `${timePrefix} - ${row.event_title}`;
       const body = row.event_description
         ? `${scopePrefix}: ${row.event_description}`
@@ -225,9 +341,13 @@ serve(async (req: Request) => {
         sent: successCount,
         failed: failedCount,
         expiredSubscriptionsCleaned: expiredSubscriptionsDeleted,
+        message: `Procesados ${rows.length} avisos. Enviados con éxito: ${successCount}.`,
       }),
       {
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Access-Control-Allow-Origin": "*",
+        },
         status: 200,
       }
     );
@@ -236,7 +356,10 @@ serve(async (req: Request) => {
     return new Response(
       JSON.stringify({ success: false, error: error.message || "Internal server error" }),
       {
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Access-Control-Allow-Origin": "*",
+        },
         status: 500,
       }
     );

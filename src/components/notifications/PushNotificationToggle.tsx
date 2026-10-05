@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { usePushNotifications } from "@/hooks/usePushNotifications"
-import { Bell, BellOff, BellRing, Loader2, AlertTriangle, CheckCircle } from "lucide-react"
+import { Bell, BellOff, BellRing, Loader2, AlertTriangle, CheckCircle, Send } from "lucide-react"
 
 interface PushNotificationToggleProps {
   variant?: "compact" | "banner" | "switch"
@@ -13,8 +13,20 @@ export function PushNotificationToggle({
   compact = false,
   className = ""
 }: PushNotificationToggleProps) {
-  const { isSupported, permission, isSubscribed, isLoading, error, subscribe, unsubscribe } = usePushNotifications()
+  const {
+    isSupported,
+    permission,
+    isSubscribed,
+    isLoading,
+    error,
+    subscribe,
+    unsubscribe,
+    sendTestNotification,
+  } = usePushNotifications()
+
   const [showInfoModal, setShowInfoModal] = useState(false)
+  const [isTesting, setIsTesting] = useState(false)
+  const [testMessage, setTestMessage] = useState<string | null>(null)
 
   const isSwitchVariant = variant === "switch"
   const isCompactVariant = variant === "compact" || (compact && !isSwitchVariant)
@@ -31,21 +43,65 @@ export function PushNotificationToggle({
     }
   }
 
+  const handleSendTest = async () => {
+    setIsTesting(true)
+    setTestMessage(null)
+    const result = await sendTestNotification()
+    setIsTesting(false)
+    setTestMessage(result.message)
+    setTimeout(() => setTestMessage(null), 5000)
+  }
+
   const renderInfoModal = () => (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-in fade-in">
       <div className="bg-white dark:bg-slate-900 rounded-xl max-w-sm w-full p-5 shadow-2xl border border-slate-200 dark:border-slate-800 text-left">
         <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400 font-semibold mb-2">
           <AlertTriangle className="h-5 w-5" />
-          <span>{!isSupported ? "Requisitos de Notificaciones" : "Notificaciones bloqueadas"}</span>
+          <span>{!isSupported ? "Requisitos de Notificaciones" : isSubscribed ? "Avisos de Agenda" : "Notificaciones bloqueadas"}</span>
         </div>
         {!isSupported ? (
           <div className="text-sm text-slate-600 dark:text-slate-300 space-y-2 mb-4 leading-relaxed">
             <p>Tu navegador actual no admite notificaciones en segundo plano en esta pestaña.</p>
             <ul className="text-xs text-slate-500 dark:text-slate-400 list-disc pl-4 space-y-1">
               <li>Asegúrate de acceder a la web mediante <strong>HTTPS</strong>.</li>
-              <li>En teléfonos <strong>iPhone (iOS)</strong>: Toca en <em>Compartir</em> y luego en <em>"Agregar a pantalla de inicio"</em>.</li>
+              <li>En teléfonos <strong>iPhone (iOS)</strong>: Toca en <em>Compartir</em> y luego en <em>"Agregar a pantalla de inicio"</em>. Las notificaciones Web Push de Apple requieren abrir la app desde el icono de inicio.</li>
               <li>En <strong>Android</strong>: Usa Chrome, Edge o Firefox estándar.</li>
             </ul>
+          </div>
+        ) : isSubscribed ? (
+          <div className="text-sm text-slate-600 dark:text-slate-300 space-y-3 mb-4 leading-relaxed">
+            <p className="text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-1.5">
+              <CheckCircle className="h-4 w-4" />
+              Notificaciones activas en este dispositivo.
+            </p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Recibirás recordatorios a las <strong>8:00 AM</strong> el día de cada evento agendado (público o privado al que pertenezcas).
+            </p>
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={handleSendTest}
+                disabled={isTesting}
+                className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-semibold bg-primary text-white hover:bg-primary/90 transition-colors shadow-sm disabled:opacity-50"
+              >
+                {isTesting ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    <span>Enviando prueba...</span>
+                  </>
+                ) : (
+                  <>
+                    <Send className="h-3.5 w-3.5" />
+                    <span>Enviar notificación de prueba ahora</span>
+                  </>
+                )}
+              </button>
+            </div>
+            {testMessage && (
+              <p className="text-xs text-center text-primary font-medium mt-1">
+                {testMessage}
+              </p>
+            )}
           </div>
         ) : (
           <>
@@ -63,7 +119,7 @@ export function PushNotificationToggle({
           onClick={() => setShowInfoModal(false)}
           className="w-full py-2 bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 text-sm font-medium rounded-lg hover:opacity-90 transition-opacity"
         >
-          Entendido
+          Cerrar
         </button>
       </div>
     </div>
@@ -102,10 +158,34 @@ export function PushNotificationToggle({
           />
         </button>
 
+        {isSubscribed && (
+          <button
+            type="button"
+            onClick={handleSendTest}
+            disabled={isTesting}
+            className="flex items-center gap-1 text-[11px] font-medium text-slate-500 hover:text-primary dark:text-slate-400 dark:hover:text-primary transition-colors ml-1 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700 hover:border-primary/40"
+            title="Enviar notificación de prueba a este dispositivo"
+          >
+            {isTesting ? (
+              <Loader2 className="h-3 w-3 animate-spin text-primary" />
+            ) : (
+              <Send className="h-3 w-3 text-slate-500 dark:text-slate-400" />
+            )}
+            <span className="hidden sm:inline">Probar</span>
+          </button>
+        )}
+
+        {testMessage && (
+          <div className="absolute top-full left-0 mt-1 z-30 bg-slate-900 text-white text-[11px] px-2.5 py-1 rounded shadow-lg whitespace-nowrap animate-in fade-in">
+            {testMessage}
+          </div>
+        )}
+
         {showInfoModal && renderInfoModal()}
       </div>
     )
   }
+
 
   // 2. Vista compacta para el Header (Campanita)
   if (isCompactVariant) {
@@ -203,7 +283,29 @@ export function PushNotificationToggle({
           </div>
         </div>
 
-        <div className="shrink-0 self-end sm:self-center">
+        <div className="shrink-0 self-end sm:self-center flex items-center gap-2">
+          {isSubscribed && (
+            <button
+              type="button"
+              onClick={handleSendTest}
+              disabled={isTesting}
+              className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-medium border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 transition-colors"
+              title="Enviar notificación de prueba a este dispositivo"
+            >
+              {isTesting ? (
+                <>
+                  <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
+                  <span>Probando...</span>
+                </>
+              ) : (
+                <>
+                  <Send className="h-3.5 w-3.5" />
+                  <span>Probar</span>
+                </>
+              )}
+            </button>
+          )}
+
           {permission === "denied" ? (
             <button
               onClick={() => setShowInfoModal(true)}
@@ -241,6 +343,7 @@ export function PushNotificationToggle({
           )}
         </div>
       </div>
+
 
       {showInfoModal && renderInfoModal()}
     </div>
