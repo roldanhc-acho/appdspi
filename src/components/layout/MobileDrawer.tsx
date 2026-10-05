@@ -51,7 +51,10 @@ export function MobileDrawer({ isOpen, onClose }: MobileDrawerProps) {
       {/* Drawer lateral oscuro con rojo corporativo de DSPI */}
       <div className="relative z-50 flex flex-col h-full w-[85%] max-w-xs bg-zinc-950 text-white shadow-2xl border-r border-zinc-900 transition-transform duration-300 animate-in slide-in-from-left">
         {/* Cabecera del usuario */}
-        <div className="p-5 border-b border-zinc-900 bg-zinc-900/40">
+        <div 
+          className="p-5 border-b border-zinc-900 bg-zinc-900/40"
+          style={{ paddingTop: "calc(1.25rem + env(safe-area-inset-top, 0px))" }}
+        >
           <div className="flex items-center justify-between mb-4">
             <img src="/logo.svg" alt="DSPI" className="h-8 object-contain" />
             <button
@@ -204,7 +207,10 @@ export function MobileDrawer({ isOpen, onClose }: MobileDrawerProps) {
         </div>
 
         {/* Footer con botón de cerrar sesión */}
-        <div className="p-4 border-t border-zinc-900 bg-zinc-950">
+        <div 
+          className="p-4 border-t border-zinc-900 bg-zinc-950"
+          style={{ paddingBottom: "calc(1rem + env(safe-area-inset-bottom, 0px))" }}
+        >
           <button
             onClick={() => {
               onClose()

@@ -7,7 +7,7 @@ export function Header({ onMenuClick }: { onMenuClick: () => void }) {
     const { profile, signOut } = useAuth()
 
     return (
-        <header className="flex h-16 items-center justify-between border-b bg-white px-3 sm:px-6 dark:bg-slate-950 dark:border-slate-800 flex-nowrap gap-2">
+        <header className="flex items-center justify-between border-b bg-white px-3 sm:px-6 dark:bg-slate-950 dark:border-slate-800 flex-nowrap gap-2 pt-[env(safe-area-inset-top,0px)] h-[calc(4rem+env(safe-area-inset-top,0px))]">
             <div className="flex items-center gap-2 sm:gap-4 min-w-0">
                 <button
                     onClick={onMenuClick}

@@ -151,7 +151,7 @@ export default function ProductiveHoursPage() {
             </div>
 
             {/* List */}
-            <div className="overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900/50 shadow-xl">
+            <div className="overflow-x-auto rounded-2xl border border-zinc-800 bg-zinc-900/50 shadow-xl">
                 <table className="w-full text-left border-collapse">
                     <thead>
                         <tr className="border-b border-zinc-800 bg-zinc-900/80">

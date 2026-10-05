@@ -460,7 +460,7 @@ export default function TasksPage() {
 
             {/* List View */}
             {view === 'list' && (
-                <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:bg-slate-900 dark:border-slate-800">
+                <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm dark:bg-slate-900 dark:border-slate-800">
                     <table className="w-full text-left text-sm">
                         <thead className="bg-slate-50 text-slate-500 dark:bg-slate-950 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800">
                             <tr>

@@ -131,7 +131,7 @@ export default function EmployeesPage() {
                 <span className="font-semibold">Nota:</span> Los nuevos usuarios pueden registrarse desde la página de inicio de sesión. Una vez registrados, aparecerán aquí para asignarles roles y detalles.
             </div>
 
-            <div className="overflow-hidden rounded-lg border bg-white shadow-sm dark:bg-slate-800 dark:border-slate-700">
+            <div className="overflow-x-auto rounded-lg border bg-white shadow-sm dark:bg-slate-800 dark:border-slate-700">
                 <table className="w-full text-left text-sm">
                     <thead className="bg-slate-50 text-slate-500 dark:bg-slate-900 dark:text-slate-400">
                         <tr>
@@ -202,8 +202,8 @@ export default function EmployeesPage() {
             </div>
 
             {editingUser && (
-                <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 p-4 z-50">
-                    <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-lg dark:bg-slate-900">
+                <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 p-4 z-50 overflow-y-auto">
+                    <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-lg dark:bg-slate-900 max-h-[90vh] overflow-y-auto my-auto">
                         <div className="mb-4 flex items-center justify-between">
                             <h2 className="text-xl font-bold dark:text-white">Editar Usuario</h2>
                             <button onClick={() => setEditingUser(null)}><X className="h-5 w-5 text-slate-500" /></button>

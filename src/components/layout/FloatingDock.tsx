@@ -37,7 +37,10 @@ export function FloatingDock() {
   ]
 
   return (
-    <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 md:hidden w-auto max-w-[92vw] pointer-events-auto">
+    <div
+      className="fixed left-1/2 -translate-x-1/2 z-40 md:hidden w-auto max-w-[92vw] pointer-events-auto"
+      style={{ bottom: "calc(1rem + env(safe-area-inset-bottom, 0px))" }}
+    >
       <nav className="flex items-center gap-1 p-1.5 rounded-full bg-zinc-950/92 backdrop-blur-xl border border-zinc-800/90 shadow-[0_10px_35px_rgba(0,0,0,0.5)]">
         {items.map((item) => {
           const Icon = item.icon
