@@ -261,9 +261,11 @@ export default function TimeLogsPage() {
 
         const isWknd = isWeekend(day)
         const isHoliday = isNonWorkingDay(day) && !isWknd
-        const target = (isWknd || isHoliday) ? 0 : 9
+        const userDailyHours = profile?.daily_hours ?? 9
+        const target = (isWknd || isHoliday) ? 0 : userDailyHours
 
-        const effectiveHours = loggedHours + (isAbsenceJustified && !isWknd && !isHoliday ? 9 : 0)
+        const absenceHours = absence?.hours != null ? Number(absence.hours) : userDailyHours
+        const effectiveHours = loggedHours + (isAbsenceJustified && !isWknd && !isHoliday ? absenceHours : 0)
         const balance = effectiveHours - target
 
         return {
@@ -723,15 +725,18 @@ export default function TimeLogsPage() {
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-slate-400 mb-1">Horas</label>
+                                <label className="block text-sm font-medium text-slate-400 mb-1">
+                                    Horas <span className="text-slate-500 font-normal text-xs">(intervalos de 30 min / 0.5h)</span>
+                                </label>
                                 <input
                                     type="number"
-                                    step="0.01"
+                                    step="0.5"
+                                    min="0.5"
                                     required
                                     value={formData.hours_worked}
                                     onChange={(e) => setFormData({ ...formData, hours_worked: e.target.value })}
                                     className="w-full rounded-lg border border-slate-700 bg-slate-800 p-2.5 text-white outline-none focus:border-blue-500"
-                                    placeholder="0.00"
+                                    placeholder="0.0"
                                 />
                             </div>
 
@@ -793,17 +798,17 @@ export default function TimeLogsPage() {
 
                             <div>
                                 <label className="block text-sm font-medium text-slate-400 mb-1">
-                                    Horas a guardar en el banco
+                                    Horas a guardar en el banco <span className="text-slate-500 font-normal text-xs">(intervalos de 0.5h)</span>
                                 </label>
                                 <input
                                     type="number"
-                                    step="0.01"
+                                    step="0.5"
                                     max={monthStats.availableToSave}
-                                    min="0.01"
+                                    min="0.5"
                                     value={bankHoursToSave}
                                     onChange={(e) => setBankHoursToSave(e.target.value)}
                                     className="w-full rounded-lg border border-slate-700 bg-slate-800 p-2.5 text-white outline-none focus:border-green-500"
-                                    placeholder="0.00"
+                                    placeholder="0.0"
                                 />
                             </div>
 

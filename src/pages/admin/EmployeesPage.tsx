@@ -69,7 +69,7 @@ export default function EmployeesPage() {
                 role: editForm.role,
                 email: editForm.email,
                 is_active: editForm.is_active,
-                daily_hours: editForm.daily_hours ? parseInt(editForm.daily_hours) : 9
+                daily_hours: editForm.daily_hours ? parseFloat(editForm.daily_hours) : 9
             }).eq("id", editingUser.id)
 
             if (error) throw error
@@ -258,8 +258,9 @@ export default function EmployeesPage() {
                                     onChange={(e) => setEditForm({ ...editForm, daily_hours: e.target.value })}
                                     className="w-full rounded border p-2 dark:bg-slate-800 dark:border-slate-700 dark:text-white"
                                     placeholder="9"
-                                    min="1"
+                                    min="0.5"
                                     max="24"
+                                    step="0.5"
                                 />
                                 <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                                     Base de horas esperadas por día (usada para productividad y banco de horas). Jornada estándar: 9 horas.

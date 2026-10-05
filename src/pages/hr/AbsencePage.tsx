@@ -1,22 +1,35 @@
 import { useState, useEffect } from "react"
 import { supabase } from "@/lib/supabase"
 import type { Database } from "@/types/database.types"
-import { Plus, Check, X, Upload, FileText, Image as ImageIcon, Trash2, ExternalLink, Paperclip, Loader2 } from "lucide-react"
+import { Plus, Check, X, Upload, FileText, Image as ImageIcon, Trash2, ExternalLink, Paperclip, Loader2, Pencil } from "lucide-react"
 import { useAuth } from "@/contexts/AuthContext"
 import { SearchableSelect, type SelectOption } from "@/components/ui/SearchableSelect"
 
 type Absence = Database["public"]["Tables"]["absences"]["Row"] & {
-    profiles: { full_name: string } | null
+    profiles: { full_name: string; daily_hours?: number | null } | null
 }
 
 export default function AbsencePage() {
     const { profile } = useAuth()
     const isAdmin = profile?.role === "admin"
+    const userDailyHours = profile?.daily_hours ?? 9
 
     const [absences, setAbsences] = useState<Absence[]>([])
     const [loading, setLoading] = useState(true)
     const [showModal, setShowModal] = useState(false)
     const [isUploading, setIsUploading] = useState(false)
+
+    // Edit modal state
+    const [editingAbsence, setEditingAbsence] = useState<Absence | null>(null)
+    const [editFormData, setEditFormData] = useState({
+        hours: 9,
+        reason: "",
+        type: "vacation" as Database["public"]["Enums"]["absence_type"],
+        start_date: "",
+        end_date: "",
+        status: "pending" as Database["public"]["Enums"]["absence_status"]
+    })
+    const [isUpdating, setIsUpdating] = useState(false)
 
     const [selectedFile, setSelectedFile] = useState<File | null>(null)
     const [filePreviewUrl, setFilePreviewUrl] = useState<string | null>(null)
@@ -34,8 +47,14 @@ export default function AbsencePage() {
         end_date: "",
         type: "vacation",
         reason: "",
-        hours: 9
+        hours: userDailyHours
     })
+
+    useEffect(() => {
+        if (profile?.daily_hours) {
+            setFormData(prev => ({ ...prev, hours: profile.daily_hours ?? 9 }))
+        }
+    }, [profile?.daily_hours])
 
     useEffect(() => {
         fetchAbsences()
@@ -45,7 +64,7 @@ export default function AbsencePage() {
         try {
             let query = supabase
                 .from("absences")
-                .select("*, profiles(full_name)")
+                .select("*, profiles(full_name, daily_hours)")
                 .order("start_date", { ascending: false })
 
             // If not admin, only show own absences
@@ -90,7 +109,13 @@ export default function AbsencePage() {
     }
 
     const resetForm = () => {
-        setFormData({ start_date: "", end_date: "", type: "vacation", reason: "", hours: 9 })
+        setFormData({
+            start_date: "",
+            end_date: "",
+            type: "vacation",
+            reason: "",
+            hours: profile?.daily_hours ?? 9
+        })
         handleRemoveFile()
     }
 
@@ -147,6 +172,53 @@ export default function AbsencePage() {
         }
     }
 
+    const openEditModal = (absence: Absence) => {
+        setEditingAbsence(absence)
+        setEditFormData({
+            hours: absence.hours ?? absence.profiles?.daily_hours ?? 9,
+            reason: absence.reason || "",
+            type: absence.type,
+            start_date: absence.start_date,
+            end_date: absence.end_date,
+            status: absence.status || "pending"
+        })
+    }
+
+    const handleUpdateAbsence = async (e: React.FormEvent) => {
+        e.preventDefault()
+        if (!editingAbsence) return
+
+        setIsUpdating(true)
+        try {
+            const updatePayload: Record<string, any> = {
+                hours: Number(editFormData.hours),
+                reason: editFormData.reason,
+                type: editFormData.type,
+                start_date: editFormData.start_date,
+                end_date: editFormData.end_date,
+            }
+
+            if (isAdmin) {
+                updatePayload.status = editFormData.status
+            }
+
+            const { error } = await supabase
+                .from("absences")
+                .update(updatePayload)
+                .eq("id", editingAbsence.id)
+
+            if (error) throw error
+
+            setEditingAbsence(null)
+            fetchAbsences()
+        } catch (error) {
+            console.error("Error updating absence:", error)
+            alert("Error al actualizar la solicitud de ausencia")
+        } finally {
+            setIsUpdating(false)
+        }
+    }
+
     const handleUpdateStatus = async (id: string, status: "approved" | "rejected") => {
         try {
             const { error } = await supabase.from("absences").update({ status }).eq("id", id)
@@ -172,7 +244,10 @@ export default function AbsencePage() {
             <div className="flex items-center justify-between">
                 <h1 className="text-2xl font-bold dark:text-white">Gestión de ausencias/vacaciones</h1>
                 <button
-                    onClick={() => setShowModal(true)}
+                    onClick={() => {
+                        resetForm()
+                        setShowModal(true)
+                    }}
                     className="flex items-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 transition-colors"
                 >
                     <Plus className="h-4 w-4" />
@@ -191,7 +266,7 @@ export default function AbsencePage() {
                             <th className="px-4 py-3 font-medium">Motivo</th>
                             <th className="px-4 py-3 font-medium">Certificado / Comprobante</th>
                             <th className="px-4 py-3 font-medium">Estado</th>
-                            {isAdmin && <th className="px-4 py-3 font-medium">Acciones</th>}
+                            <th className="px-4 py-3 font-medium">Acciones</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
@@ -205,8 +280,8 @@ export default function AbsencePage() {
                                         <span>hasta {new Date(`${absence.end_date}T12:00:00`).toLocaleDateString()}</span>
                                     </div>
                                 </td>
-                                <td className="px-4 py-3 text-slate-500 text-center">
-                                    {absence.hours != null ? `${absence.hours}h` : "9h"}
+                                <td className="px-4 py-3 text-slate-500 text-center font-medium">
+                                    {absence.hours != null ? `${absence.hours}h` : `${absence.profiles?.daily_hours ?? 9}h`}
                                 </td>
                                 <td className="px-4 py-3 text-slate-500 max-w-xs truncate" title={absence.reason || ""}>
                                     {absence.reason || "-"}
@@ -237,29 +312,47 @@ export default function AbsencePage() {
                                         {absence.status}
                                     </span>
                                 </td>
-                                {isAdmin && (
-                                    <td className="px-4 py-3">
-                                        {absence.status === 'pending' && (
-                                            <div className="flex gap-2">
-                                                <button onClick={() => handleUpdateStatus(absence.id, 'approved')} className="text-green-600 hover:text-green-800" title="Aprobar">
+                                <td className="px-4 py-3">
+                                    <div className="flex items-center gap-1.5">
+                                        {isAdmin && absence.status === 'pending' && (
+                                            <>
+                                                <button
+                                                    onClick={() => handleUpdateStatus(absence.id, 'approved')}
+                                                    className="text-green-600 hover:text-green-800 p-1 rounded hover:bg-green-50 dark:hover:bg-green-900/30 transition-colors"
+                                                    title="Aprobar"
+                                                >
                                                     <Check className="h-4 w-4" />
                                                 </button>
-                                                <button onClick={() => handleUpdateStatus(absence.id, 'rejected')} className="text-red-600 hover:text-red-800" title="Rechazar">
+                                                <button
+                                                    onClick={() => handleUpdateStatus(absence.id, 'rejected')}
+                                                    className="text-red-600 hover:text-red-800 p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"
+                                                    title="Rechazar"
+                                                >
                                                     <X className="h-4 w-4" />
                                                 </button>
-                                            </div>
+                                            </>
                                         )}
-                                    </td>
-                                )}
+                                        {(isAdmin || (absence.user_id === profile?.id && absence.status === 'pending')) && (
+                                            <button
+                                                onClick={() => openEditModal(absence)}
+                                                className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 p-1 rounded hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors"
+                                                title="Editar solicitud"
+                                            >
+                                                <Pencil className="h-4 w-4" />
+                                            </button>
+                                        )}
+                                    </div>
+                                </td>
                             </tr>
                         ))}
                         {absences.length === 0 && (
-                            <tr><td colSpan={isAdmin ? 8 : 7} className="px-4 py-8 text-center text-slate-500">No se encontraron solicitudes.</td></tr>
+                            <tr><td colSpan={8} className="px-4 py-8 text-center text-slate-500">No se encontraron solicitudes.</td></tr>
                         )}
                     </tbody>
                 </table>
             </div>
 
+            {/* Create Absence Modal */}
             {showModal && (
                 <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 p-4 z-50 overflow-y-auto">
                     <div className="w-full max-w-lg rounded-lg bg-white p-6 shadow-lg dark:bg-slate-900 my-8">
@@ -300,16 +393,17 @@ export default function AbsencePage() {
 
                             <div>
                                 <label className="block text-sm font-medium dark:text-gray-300">
-                                    Horas <span className="text-slate-400 font-normal text-xs">(jornada completa = 9h)</span>
+                                    Horas <span className="text-slate-400 font-normal text-xs">(jornada habitual = {userDailyHours}h | intervalos de 30 min)</span>
                                 </label>
                                 <input
                                     type="number"
                                     min="0.5"
-                                    max="9"
-                                    step="0.01"
+                                    max="24"
+                                    step="0.5"
                                     value={formData.hours}
-                                    onChange={(e) => setFormData({ ...formData, hours: parseFloat(e.target.value) || 9 })}
+                                    onChange={(e) => setFormData({ ...formData, hours: parseFloat(e.target.value) || 0 })}
                                     className="w-full rounded border p-2 dark:bg-slate-800 dark:border-slate-700 dark:text-white"
+                                    required
                                 />
                             </div>
 
@@ -399,7 +493,112 @@ export default function AbsencePage() {
                                     {isUploading ? "Subiendo..." : "Enviar solicitud"}
                                 </button>
                             </div>
+                        </form>
+                    </div>
+                </div>
+            )}
 
+            {/* Edit Absence Modal */}
+            {editingAbsence && (
+                <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 p-4 z-50 overflow-y-auto">
+                    <div className="w-full max-w-lg rounded-lg bg-white p-6 shadow-lg dark:bg-slate-900 my-8">
+                        <h2 className="mb-4 text-xl font-bold dark:text-white">
+                            Editar ausencia {editingAbsence.profiles?.full_name ? `(${editingAbsence.profiles.full_name})` : ""}
+                        </h2>
+                        <form onSubmit={handleUpdateAbsence} className="space-y-4">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium dark:text-gray-300">Fecha de inicio</label>
+                                    <input
+                                        type="date"
+                                        required
+                                        value={editFormData.start_date}
+                                        onChange={(e) => setEditFormData({ ...editFormData, start_date: e.target.value })}
+                                        className="w-full rounded border p-2 dark:bg-slate-800 dark:border-slate-700 dark:text-white"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium dark:text-gray-300">Fecha de fin</label>
+                                    <input
+                                        type="date"
+                                        required
+                                        value={editFormData.end_date}
+                                        onChange={(e) => setEditFormData({ ...editFormData, end_date: e.target.value })}
+                                        className="w-full rounded border p-2 dark:bg-slate-800 dark:border-slate-700 dark:text-white"
+                                    />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium dark:text-gray-300 mb-1">Tipo</label>
+                                <SearchableSelect
+                                    value={editFormData.type}
+                                    onChange={(val) => setEditFormData({ ...editFormData, type: val as any })}
+                                    options={absenceTypeOptions}
+                                    placeholder="Seleccionar tipo de ausencia"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium dark:text-gray-300">
+                                    Horas <span className="text-slate-400 font-normal text-xs">(intervalos de 30 min / 0.5h)</span>
+                                </label>
+                                <input
+                                    type="number"
+                                    min="0.5"
+                                    max="24"
+                                    step="0.5"
+                                    value={editFormData.hours}
+                                    onChange={(e) => setEditFormData({ ...editFormData, hours: parseFloat(e.target.value) || 0 })}
+                                    className="w-full rounded border p-2 dark:bg-slate-800 dark:border-slate-700 dark:text-white"
+                                    required
+                                />
+                            </div>
+
+                            {isAdmin && (
+                                <div>
+                                    <label className="block text-sm font-medium dark:text-gray-300 mb-1">Estado</label>
+                                    <select
+                                        value={editFormData.status || "pending"}
+                                        onChange={(e) => setEditFormData({ ...editFormData, status: e.target.value as any })}
+                                        className="w-full rounded border p-2 dark:bg-slate-800 dark:border-slate-700 dark:text-white"
+                                    >
+                                        <option value="pending">Pendiente</option>
+                                        <option value="approved">Aprobado</option>
+                                        <option value="rejected">Rechazado</option>
+                                    </select>
+                                </div>
+                            )}
+
+                            <div>
+                                <label className="block text-sm font-medium dark:text-gray-300">Motivo</label>
+                                <textarea
+                                    value={editFormData.reason}
+                                    onChange={(e) => setEditFormData({ ...editFormData, reason: e.target.value })}
+                                    className="w-full rounded border p-2 dark:bg-slate-800 dark:border-slate-700 dark:text-white"
+                                    rows={3}
+                                    placeholder="Describa el motivo de la ausencia..."
+                                />
+                            </div>
+
+                            <div className="flex justify-end gap-2 pt-3">
+                                <button
+                                    type="button"
+                                    onClick={() => setEditingAbsence(null)}
+                                    disabled={isUpdating}
+                                    className="rounded px-4 py-2 text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={isUpdating}
+                                    className="flex items-center gap-2 rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:opacity-50"
+                                >
+                                    {isUpdating && <Loader2 className="h-4 w-4 animate-spin" />}
+                                    {isUpdating ? "Guardando..." : "Guardar cambios"}
+                                </button>
+                            </div>
                         </form>
                     </div>
                 </div>
@@ -407,4 +606,3 @@ export default function AbsencePage() {
         </div>
     )
 }
-

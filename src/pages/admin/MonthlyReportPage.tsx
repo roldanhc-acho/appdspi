@@ -51,7 +51,7 @@ export default function MonthlyReportPage() {
             const [profilesRes, timeLogsRes, absencesRes, hourBanksRes] = await Promise.all([
                 supabase.from("profiles").select("*").neq("is_active", false).order("full_name"),
                 supabase.from("time_logs").select("user_id, hours_worked").gte("date", monthStartStr).lte("date", monthEndStr),
-                supabase.from("absences").select("user_id, start_date, end_date, type, status").eq("status", "approved"),
+                supabase.from("absences").select("user_id, start_date, end_date, type, status, hours").eq("status", "approved"),
                 supabase.from("hour_bank").select("user_id, hours_saved, month")
             ])
 
@@ -77,16 +77,17 @@ export default function MonthlyReportPage() {
                 const userDailyHours: number = (user as any).daily_hours ?? 9
                 const userExpectedHours = workingDays * userDailyHours
 
-                // Calculate absence hours using user's own daily hours
+                // Calculate absence hours using user's own daily hours or registered absence hours
                 const userAbsences = (absences || []).filter(a => a.user_id === user.id)
                 let absenceHours = 0
 
                 userAbsences.forEach(absence => {
+                    const singleDayHours = (absence as any).hours != null ? Number((absence as any).hours) : userDailyHours
                     daysInMonth.forEach(day => {
                         const dayStr = format(day, 'yyyy-MM-dd')
                         if (dayStr >= absence.start_date && dayStr <= absence.end_date) {
                             if (!isNonWorkingDay(day)) {
-                                absenceHours += userDailyHours
+                                absenceHours += singleDayHours
                             }
                         }
                     })
