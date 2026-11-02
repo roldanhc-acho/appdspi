@@ -4,6 +4,7 @@ import { Sidebar } from "./Sidebar"
 import { Header } from "./Header"
 import { MobileDrawer } from "./MobileDrawer"
 import { FloatingDock } from "./FloatingDock"
+import { AppUpdatePrompt } from "./AppUpdatePrompt"
 
 export function MainLayout() {
     const [drawerOpen, setDrawerOpen] = useState(false)
@@ -34,6 +35,7 @@ export function MainLayout() {
 
                 {/* Dock flotante pequeño con los 4 botones principales en móvil */}
                 <FloatingDock />
+                <AppUpdatePrompt />
             </div>
         </div>
     )

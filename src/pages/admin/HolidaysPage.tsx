@@ -19,7 +19,7 @@ import { format, parseISO, differenceInDays } from "date-fns"
 import { es } from "date-fns/locale"
 
 export default function HolidaysPage() {
-    const { holidays, loading, addHoliday, updateHoliday, deleteHoliday, resetToDefaults } = useHolidays()
+    const { holidays, loading, isTableMissing, addHoliday, updateHoliday, deleteHoliday, resetToDefaults } = useHolidays()
 
     const [searchTerm, setSearchTerm] = useState("")
     const [selectedYear, setSelectedYear] = useState<string>("2026")
@@ -28,6 +28,7 @@ export default function HolidaysPage() {
     const [isSaving, setIsSaving] = useState(false)
     const [isResetting, setIsResetting] = useState(false)
     const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+    const [formError, setFormError] = useState<string | null>(null)
 
     // Form state
     const [formData, setFormData] = useState<{
@@ -94,6 +95,7 @@ export default function HolidaysPage() {
     }, [holidays, selectedYear, todayStr])
 
     const handleOpenModal = (holiday?: HolidayItem) => {
+        setFormError(null)
         if (holiday) {
             setEditingHoliday(holiday)
             setFormData({
@@ -117,6 +119,7 @@ export default function HolidaysPage() {
         if (!formData.name.trim() || !formData.date) return
 
         setIsSaving(true)
+        setFormError(null)
         try {
             if (editingHoliday) {
                 await updateHoliday(editingHoliday.id, {
@@ -132,8 +135,9 @@ export default function HolidaysPage() {
                 })
             }
             setShowModal(false)
-        } catch (error) {
-            console.error("Error guardando feriado:", error)
+        } catch (error: any) {
+            console.warn("Aviso al guardar feriado:", error)
+            setFormError(error?.message || "Error al guardar el feriado")
         } finally {
             setIsSaving(false)
         }
@@ -149,6 +153,9 @@ export default function HolidaysPage() {
     }
 
     const handleResetDefaults = async () => {
+        if (!window.confirm("¿Deseas restablecer los feriados oficiales nacionales de 2026? Se restaurarán los valores predeterminados.")) {
+            return
+        }
         setIsResetting(true)
         try {
             await resetToDefaults()
@@ -187,7 +194,7 @@ export default function HolidaysPage() {
                         title="Restablecer feriados nacionales oficiales de 2026"
                     >
                         <RefreshCw className={`h-4 w-4 ${isResetting ? "animate-spin" : ""}`} />
-                        Feriados Oficiales
+                        Restablecer Oficiales
                     </button>
                     <button
                         onClick={() => handleOpenModal()}
@@ -198,6 +205,19 @@ export default function HolidaysPage() {
                     </button>
                 </div>
             </div>
+
+            {/* Missing Supabase Table Warning */}
+            {isTableMissing && (
+                <div className="rounded-2xl border border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800/50 p-4 text-amber-900 dark:text-amber-200 flex items-start gap-3 shadow-sm">
+                    <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+                    <div className="text-sm space-y-1">
+                        <p className="font-semibold">Atención: La tabla de feriados en la base de datos Supabase aún no fue creada</p>
+                        <p className="text-amber-800 dark:text-amber-300">
+                            Cualquier feriado nuevo se guarda temporalmente en este navegador. Para que se guarde de forma permanente en la base de datos y sea visible para todos los usuarios y dispositivos, un administrador debe ejecutar el script <code className="bg-amber-200/60 dark:bg-amber-900/40 px-1.5 py-0.5 rounded font-mono text-xs">scripts/create_holidays_table.sql</code> en el SQL Editor de Supabase.
+                        </p>
+                    </div>
+                </div>
+            )}
 
             {/* Metrics Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -465,6 +485,13 @@ export default function HolidaysPage() {
                                     <option value="no_laborable">Día No Laborable / Optativo</option>
                                 </select>
                             </div>
+
+                            {formError && (
+                                <div className="rounded-xl border border-amber-300 bg-amber-50 dark:bg-amber-950/30 p-3 text-xs text-amber-800 dark:text-amber-300 flex items-start gap-2">
+                                    <AlertCircle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+                                    <span>{formError}</span>
+                                </div>
+                            )}
 
                             <div className="pt-2 flex items-center justify-end gap-3">
                                 <button

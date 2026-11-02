@@ -12,6 +12,7 @@ const STORAGE_KEY = "dspi_holidays_v1"
 interface HolidaysContextType {
     holidays: HolidayItem[]
     loading: boolean
+    isTableMissing: boolean
     addHoliday: (holiday: Omit<HolidayItem, "id">) => Promise<void>
     updateHoliday: (id: string, updated: Partial<HolidayItem>) => Promise<void>
     deleteHoliday: (id: string) => Promise<void>
@@ -30,7 +31,10 @@ export function HolidaysProvider({ children }: { children: React.ReactNode }) {
             if (cached) {
                 const parsed: HolidayItem[] = JSON.parse(cached)
                 if (Array.isArray(parsed) && parsed.length > 0) {
-                    return parsed
+                    // Ensure all default holidays are included alongside cached custom ones
+                    const cachedDates = new Set(parsed.map(h => h.date))
+                    const missingDefaults = DEFAULT_HOLIDAYS.filter(dh => !cachedDates.has(dh.date))
+                    return [...parsed, ...missingDefaults].sort((a, b) => a.date.localeCompare(b.date))
                 }
             }
         } catch (e) {
@@ -39,16 +43,17 @@ export function HolidaysProvider({ children }: { children: React.ReactNode }) {
         return DEFAULT_HOLIDAYS
     })
     const [loading, setLoading] = useState(true)
+    const [isTableMissing, setIsTableMissing] = useState(false)
 
-    // Save to localStorage whenever state changes
-    const updateLocalHolidays = (newList: HolidayItem[]) => {
+    // Helper to persist list in localStorage and state
+    const saveHolidaysState = useCallback((newList: HolidayItem[]) => {
         setHolidays(newList)
         try {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(newList))
         } catch (e) {
             console.error("Error writing holidays to localStorage", e)
         }
-    }
+    }, [])
 
     const fetchHolidays = useCallback(async () => {
         setLoading(true)
@@ -58,10 +63,31 @@ export function HolidaysProvider({ children }: { children: React.ReactNode }) {
                 .select("*")
                 .order("date", { ascending: true })
 
-            if (!error && data && data.length > 0) {
-                // Merge database holidays with defaults (ensure defaults exist if not explicitly deleted)
+            if (error) {
+                if (error.code === "PGRST205" || error.message?.includes("holidays")) {
+                    console.warn("Tabla 'holidays' no encontrada en Supabase. Usando respaldo local.")
+                    setIsTableMissing(true)
+                } else {
+                    console.warn("Error consultando holidays en Supabase:", error)
+                }
+                
+                // If DB query fails, ensure DEFAULT_HOLIDAYS (including Oct 12) are merged with any existing custom ones
+                setHolidays(prev => {
+                    const existingDates = new Set(prev.map(h => h.date))
+                    const missingDefaults = DEFAULT_HOLIDAYS.filter(dh => !existingDates.has(dh.date))
+                    if (missingDefaults.length > 0) {
+                        const merged = [...prev, ...missingDefaults].sort((a, b) => a.date.localeCompare(b.date))
+                        try {
+                            localStorage.setItem(STORAGE_KEY, JSON.stringify(merged))
+                        } catch {}
+                        return merged
+                    }
+                    return prev
+                })
+            } else if (data && data.length > 0) {
+                setIsTableMissing(false)
                 const dbHolidays: HolidayItem[] = data.map((item: any) => ({
-                    id: item.id,
+                    id: String(item.id),
                     date: item.date,
                     name: item.name,
                     type: item.type || "feriado",
@@ -73,19 +99,18 @@ export function HolidaysProvider({ children }: { children: React.ReactNode }) {
                 const dbDates = new Set(dbHolidays.map(h => h.date))
                 const missingDefaults = DEFAULT_HOLIDAYS.filter(dh => !dbDates.has(dh.date))
                 const merged = [...dbHolidays, ...missingDefaults].sort((a, b) => a.date.localeCompare(b.date))
-                updateLocalHolidays(merged)
+                saveHolidaysState(merged)
             } else {
-                // If table doesn't exist yet or has no data, ensure we use cached or default list
-                if (holidays.length === 0) {
-                    updateLocalHolidays(DEFAULT_HOLIDAYS)
-                }
+                // Table exists but is empty -> seed with defaults
+                setIsTableMissing(false)
+                saveHolidaysState(DEFAULT_HOLIDAYS)
             }
         } catch (err) {
             console.warn("Could not fetch holidays from Supabase, using local fallback", err)
         } finally {
             setLoading(false)
         }
-    }, [])
+    }, [saveHolidaysState])
 
     useEffect(() => {
         fetchHolidays()
@@ -94,6 +119,7 @@ export function HolidaysProvider({ children }: { children: React.ReactNode }) {
     const addHoliday = async (newHoliday: Omit<HolidayItem, "id">) => {
         let insertedId = `custom-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`
         let createdAt = new Date().toISOString()
+        let dbWarning: string | null = null
 
         // Try persisting to Supabase
         try {
@@ -104,12 +130,22 @@ export function HolidaysProvider({ children }: { children: React.ReactNode }) {
                 is_custom: true
             }]).select("id, created_at").maybeSingle()
 
-            if (!error && data?.id) {
-                insertedId = data.id
+            if (error) {
+                console.error("Error insertando feriado en Supabase:", error)
+                if (error.code === "PGRST205" || error.message?.includes("holidays")) {
+                    setIsTableMissing(true)
+                    dbWarning = "La tabla 'holidays' aún no existe en Supabase. El feriado se guardó temporalmente en este navegador, pero debes crear la tabla en Supabase para que sea visible por todos los usuarios."
+                } else {
+                    dbWarning = `Error de base de datos: ${error.message}`
+                }
+            } else if (data?.id) {
+                insertedId = String(data.id)
                 if (data.created_at) createdAt = data.created_at
+                setIsTableMissing(false)
             }
-        } catch (err) {
+        } catch (err: any) {
             console.warn("Could not insert holiday into Supabase table", err)
+            dbWarning = err?.message || "No se pudo conectar a la base de datos."
         }
 
         const itemToAdd: HolidayItem = {
@@ -119,36 +155,70 @@ export function HolidaysProvider({ children }: { children: React.ReactNode }) {
             created_at: createdAt
         }
 
-        const updated = [...holidays.filter(h => h.id !== insertedId && h.date !== itemToAdd.date), itemToAdd]
-            .sort((a, b) => a.date.localeCompare(b.date))
-        updateLocalHolidays(updated)
+        setHolidays(prev => {
+            const updated = [...prev.filter(h => h.id !== insertedId && h.date !== itemToAdd.date), itemToAdd]
+                .sort((a, b) => a.date.localeCompare(b.date))
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(updated))
+            } catch (e) {
+                console.error("Error writing holidays to localStorage", e)
+            }
+            return updated
+        })
+
+        if (dbWarning) {
+            // Throw so caller UI can display feedback if desired
+            throw new Error(dbWarning)
+        }
     }
 
     const updateHoliday = async (id: string, updatedData: Partial<HolidayItem>) => {
         try {
-            await supabase.from("holidays").update(updatedData).eq("id", id)
+            const { error } = await supabase.from("holidays").update(updatedData).eq("id", id)
+            if (error) {
+                console.warn("Could not update holiday in Supabase", error)
+                if (error.code === "PGRST205") setIsTableMissing(true)
+            }
         } catch (err) {
             console.warn("Could not update holiday in Supabase", err)
         }
 
-        const updated = holidays.map(h => h.id === id ? { ...h, ...updatedData } : h)
-            .sort((a, b) => a.date.localeCompare(b.date))
-        updateLocalHolidays(updated)
+        setHolidays(prev => {
+            const updated = prev.map(h => h.id === id ? { ...h, ...updatedData } : h)
+                .sort((a, b) => a.date.localeCompare(b.date))
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(updated))
+            } catch (e) {
+                console.error("Error writing holidays to localStorage", e)
+            }
+            return updated
+        })
     }
 
     const deleteHoliday = async (id: string) => {
         try {
-            await supabase.from("holidays").delete().eq("id", id)
+            const { error } = await supabase.from("holidays").delete().eq("id", id)
+            if (error) {
+                console.warn("Could not delete holiday from Supabase", error)
+                if (error.code === "PGRST205") setIsTableMissing(true)
+            }
         } catch (err) {
             console.warn("Could not delete holiday from Supabase", err)
         }
 
-        const updated = holidays.filter(h => h.id !== id)
-        updateLocalHolidays(updated)
+        setHolidays(prev => {
+            const updated = prev.filter(h => h.id !== id)
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(updated))
+            } catch (e) {
+                console.error("Error writing holidays to localStorage", e)
+            }
+            return updated
+        })
     }
 
     const resetToDefaults = async () => {
-        updateLocalHolidays(DEFAULT_HOLIDAYS)
+        saveHolidaysState(DEFAULT_HOLIDAYS)
     }
 
     const isNonWorkingDay = (date: Date) => {
@@ -164,6 +234,7 @@ export function HolidaysProvider({ children }: { children: React.ReactNode }) {
             value={{
                 holidays,
                 loading,
+                isTableMissing,
                 addHoliday,
                 updateHoliday,
                 deleteHoliday,

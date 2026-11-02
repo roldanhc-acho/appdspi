@@ -15,7 +15,7 @@ import {
     isSameMonth
 } from "date-fns"
 import { es } from "date-fns/locale"
-import { ChevronLeft, ChevronRight, ChevronDown, Calendar as CalendarIcon, CheckCircle, Trash2, PiggyBank, Plus, Pencil, Clock } from "lucide-react"
+import { ChevronLeft, ChevronRight, ChevronDown, Calendar as CalendarIcon, CheckCircle, Trash2, PiggyBank, Plus, Pencil, Clock, Zap } from "lucide-react"
 import { useHolidays } from "@/contexts/HolidaysContext"
 import { SearchableSelect, type SelectOption } from "@/components/ui/SearchableSelect"
 
@@ -33,7 +33,7 @@ type HourBank = {
 }
 
 export default function TimeLogsPage() {
-    const { isNonWorkingDay } = useHolidays()
+    const { isNonWorkingDay, holidays } = useHolidays()
     const { profile } = useAuth()
     const [currentDate, setCurrentDate] = useState(new Date())
     const [logs, setLogs] = useState<TimeLog[]>([])
@@ -48,6 +48,17 @@ export default function TimeLogsPage() {
     const [showBankModal, setShowBankModal] = useState(false)
     const [bankHoursToSave, setBankHoursToSave] = useState("")
     const [expandedDay, setExpandedDay] = useState<string | null>(null)
+    const [quickLoadingDate, setQuickLoadingDate] = useState<string | null>(null)
+
+    const QUICK_LOG_USERS: Record<string, { taskId: string, taskTitle: string, hours: number }> = {
+        "801f7d64-9bab-42ee-9cc9-43d665795415": { taskId: "246f9e9b-8ba6-47ea-8cd6-12bcb7f3e62b", taskTitle: "Auxiliar de Gama Media", hours: 9 }, // BURGESSER Raul
+        "a547fe4f-5b2e-4e5f-a904-43052e318ae6": { taskId: "47101480-0c4d-401f-99b8-dc440d683bf0", taskTitle: "AUXILIAR DE PLATAFORMA", hours: 9 }, // Aiello Martina
+        "140e6b7f-4847-4a8f-8bf2-e452a342e522": { taskId: "8a89c222-1b97-4f4b-afcb-d8131e29f9db", taskTitle: "Auxiliar MBSE", hours: 5 },          // NUNEZ anna
+        "22ee144c-68c7-458f-b146-36e25904d297": { taskId: "8273a0e3-26a3-4d23-9204-253cbb37aa65", taskTitle: "Auxiliar Planner", hours: 4 },       // CREGO ROCIO
+        "140f0092-0667-4699-8719-1e3b551cc131": { taskId: "47101480-0c4d-401f-99b8-dc440d683bf0", taskTitle: "AUXILIAR DE PLATAFORMA", hours: 9 }, // PICCOLI Francisco
+        "57948c69-2b65-42ea-b76f-cb89a52af509": { taskId: "fb3714a4-56ab-42fd-a785-3d22e9630893", taskTitle: "Auxiliar de PMO", hours: 9 },        // RIVAROLA Fernanda
+    }
+    const quickLogConfig = profile?.id ? QUICK_LOG_USERS[profile.id] : undefined
 
     const [formData, setFormData] = useState({
         id: "",
@@ -261,6 +272,8 @@ export default function TimeLogsPage() {
 
         const isWknd = isWeekend(day)
         const isHoliday = isNonWorkingDay(day) && !isWknd
+        const holidayObj = holidays.find(h => h.date === dateStr)
+        const holidayName = holidayObj?.name || (isHoliday ? "Feriado" : null)
         const userDailyHours = profile?.daily_hours ?? 9
         const target = (isWknd || isHoliday) ? 0 : userDailyHours
 
@@ -274,6 +287,7 @@ export default function TimeLogsPage() {
             balance,
             isWknd,
             isHoliday,
+            holidayName,
             isAbsenceJustified,
             target,
             logs: dayLogs
@@ -326,6 +340,28 @@ export default function TimeLogsPage() {
             })
         }
         setShowModal(true)
+    }
+
+    const handleQuickLog = async (dateStr: string) => {
+        if (!profile?.id || !quickLogConfig) return
+        setQuickLoadingDate(dateStr)
+        try {
+            const { error } = await supabase.from("time_logs").insert([{
+                user_id: profile.id,
+                task_id: quickLogConfig.taskId,
+                date: dateStr,
+                hours_worked: quickLogConfig.hours,
+                notes: "",
+                type: "regular"
+            }])
+            if (error) throw error
+            await fetchLogs()
+        } catch (error) {
+            console.error("Error in quick log:", error)
+            alert("Error al completar el día")
+        } finally {
+            setQuickLoadingDate(null)
+        }
     }
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -476,6 +512,12 @@ export default function TimeLogsPage() {
                             {hourBankTotal > 0 ? '+' : ''}{hourBankTotal}h
                         </span>
                     </div>
+                    {quickLogConfig && (
+                        <div className="col-span-3 sm:col-auto flex items-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-emerald-300 text-[11px] sm:text-xs">
+                            <Zap className="h-3.5 w-3.5 text-emerald-400 fill-emerald-400 shrink-0" />
+                            <span>Registro rápido activo: <strong>{quickLogConfig.taskTitle} ({quickLogConfig.hours}h)</strong></span>
+                        </div>
+                    )}
                     {monthStats.availableToSave > 0 && (
                         <div className="col-span-3 sm:col-auto mt-1 sm:mt-0">
                             <button
@@ -516,7 +558,7 @@ export default function TimeLogsPage() {
                                     <div className="grid grid-cols-7 gap-1">
                                         {week.map(day => {
                                             const dateStr = format(day, 'yyyy-MM-dd')
-                                            const { loggedHours, target, isWknd, isHoliday, isAbsenceJustified, logs: dayLogs } = getDailyStats(day)
+                                            const { loggedHours, target, isWknd, isHoliday, holidayName, isAbsenceJustified, logs: dayLogs } = getDailyStats(day)
                                             const isToday = isSameDay(day, new Date())
                                             const isCurrentMonth = isSameMonth(day, currentDate)
                                             const isExpanded = expandedDay === dateStr
@@ -524,16 +566,14 @@ export default function TimeLogsPage() {
                                             return (
                                                 <div
                                                     key={day.toISOString()}
-                                                    className={`relative flex flex-col rounded-md sm:rounded-lg border p-1 sm:p-2 min-h-[64px] sm:min-h-[90px] transition-all cursor-pointer hover:border-primary/50 overflow-hidden
+                                                    className={`relative flex flex-col rounded-md sm:rounded-lg border p-1 sm:p-2 min-h-[64px] sm:min-h-[90px] transition-all cursor-pointer select-none hover:border-primary/50 overflow-hidden
                                                         ${isExpanded ? 'border-primary bg-primary/15 ring-1 ring-primary/40' : (isToday ? 'border-primary bg-primary/10' : 'border-slate-800/80 bg-slate-800/40')}
                                                         ${!isCurrentMonth ? 'opacity-30' : ''}
                                                         ${isWknd ? 'border-l-2 border-l-red-500' : ''}
-                                                        ${isHoliday ? 'border-l-2 border-l-orange-500' : ''}
+                                                        ${isHoliday ? 'border-l-2 border-l-orange-500 bg-gradient-to-r from-orange-500/20 via-orange-500/5 to-transparent' : ''}
                                                     `}
-                                                    onClick={() => {
-                                                        if (!isCurrentMonth) return
-                                                        setExpandedDay(isExpanded ? null : dateStr)
-                                                    }}
+                                                    onClick={(e) => { if (!isCurrentMonth || e.detail > 1) return; setExpandedDay(isExpanded ? null : dateStr) }}
+                                                    onDoubleClick={() => { if (!isCurrentMonth) return; setExpandedDay(dateStr); handleOpenModal(dateStr) }}
                                                 >
                                                     <div className="flex items-start justify-between mb-0.5 sm:mb-1">
                                                         <p className={`text-xs sm:text-sm font-bold 
@@ -556,6 +596,14 @@ export default function TimeLogsPage() {
 
                                                     {isCurrentMonth && (
                                                         <div className="flex-1 space-y-0.5 overflow-hidden">
+                                                            {holidayName && (
+                                                                <div
+                                                                    className="text-[9px] sm:text-[11px] font-medium text-orange-300/90 leading-tight line-clamp-2"
+                                                                    title={holidayName}
+                                                                >
+                                                                    {holidayName}
+                                                                </div>
+                                                            )}
                                                             {dayLogs.length > 0 ? (
                                                                 dayLogs.slice(0, 2).map(l => (
                                                                     <div
@@ -570,6 +618,20 @@ export default function TimeLogsPage() {
                                                                     <CheckCircle className="h-2.5 w-2.5 sm:h-3 sm:w-3 shrink-0" />
                                                                     <span className="truncate">Justif.</span>
                                                                 </div>
+                                                            ) : (quickLogConfig && !isWknd && !isHoliday) ? (
+                                                                <button
+                                                                    type="button"
+                                                                    disabled={quickLoadingDate === dateStr}
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation()
+                                                                        handleQuickLog(dateStr)
+                                                                    }}
+                                                                    className="mt-1 w-full flex items-center justify-center gap-1 rounded bg-emerald-500/15 hover:bg-emerald-500/30 border border-emerald-500/40 px-1 py-0.5 sm:py-1 text-[9px] sm:text-xs font-medium text-emerald-300 transition-colors"
+                                                                    title={`Completar día con ${quickLogConfig.hours}h en ${quickLogConfig.taskTitle}`}
+                                                                >
+                                                                    <Zap className="h-2.5 w-2.5 sm:h-3 sm:w-3 shrink-0 fill-emerald-400 text-emerald-400" />
+                                                                    <span className="truncate">{quickLoadingDate === dateStr ? 'Cargando...' : `Completar ${quickLogConfig.hours}h`}</span>
+                                                                </button>
                                                             ) : null}
                                                             {dayLogs.length > 2 && (
                                                                 <span className="text-[9px] sm:text-xs text-slate-500">+{dayLogs.length - 2}</span>
@@ -596,18 +658,39 @@ export default function TimeLogsPage() {
                                                         <Clock className="h-3 w-3 text-slate-400" />
                                                         <span className="text-white font-medium">{expandedDayStats.loggedHours}</span>
                                                         <span className="text-slate-500">/ {expandedDayStats.target}h</span>
+                                                        {expandedDayStats.holidayName && (
+                                                            <span className="ml-1.5 px-1.5 py-0.5 rounded-full border border-orange-500/40 bg-orange-500/15 text-orange-300 text-[10px] sm:text-xs font-medium">
+                                                                {expandedDayStats.holidayName}
+                                                            </span>
+                                                        )}
                                                     </div>
                                                 </div>
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation()
-                                                        handleOpenModal(format(expandedDayInWeek, 'yyyy-MM-dd'))
-                                                    }}
-                                                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-primary hover:bg-primary/90 text-xs font-medium text-white transition-colors"
-                                                >
-                                                    <Plus className="h-3.5 w-3.5" />
-                                                    <span>Nuevo</span>
-                                                </button>
+                                                <div className="flex items-center gap-2">
+                                                    {quickLogConfig && !expandedDayStats.isWknd && !expandedDayStats.isHoliday && expandedDayStats.logs.length === 0 && !expandedDayStats.isAbsenceJustified && (
+                                                        <button
+                                                            type="button"
+                                                            disabled={quickLoadingDate === format(expandedDayInWeek, 'yyyy-MM-dd')}
+                                                            onClick={(e) => {
+                                                                e.stopPropagation()
+                                                                handleQuickLog(format(expandedDayInWeek, 'yyyy-MM-dd'))
+                                                            }}
+                                                            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-emerald-500/40 bg-emerald-500/15 hover:bg-emerald-500/30 text-xs font-medium text-emerald-300 transition-colors"
+                                                        >
+                                                            <Zap className="h-3.5 w-3.5 fill-emerald-400 text-emerald-400" />
+                                                            <span>{quickLoadingDate === format(expandedDayInWeek, 'yyyy-MM-dd') ? 'Cargando...' : `Completar día (${quickLogConfig.hours}h)`}</span>
+                                                        </button>
+                                                    )}
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation()
+                                                            handleOpenModal(format(expandedDayInWeek, 'yyyy-MM-dd'))
+                                                        }}
+                                                        className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-primary hover:bg-primary/90 text-xs font-medium text-white transition-colors"
+                                                    >
+                                                        <Plus className="h-3.5 w-3.5" />
+                                                        <span>Nuevo</span>
+                                                    </button>
+                                                </div>
                                             </div>
 
                                             {expandedDayStats.logs.length > 0 ? (

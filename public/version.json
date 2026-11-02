@@ -1,0 +1,9 @@
+{
+  "version": "2026.11.02-v1",
+  "title": "Nueva actualización disponible",
+  "highlights": [
+    "Feriados destacados: Nuevo fondo naranja difuminado con la descripción del feriado visible en cada tarjeta del calendario.",
+    "Carga con doble clic: Ahora podés hacer doble clic sobre un día del calendario para abrir directamente el formulario de nuevo registro (1 clic mantiene el despliegue del detalle).",
+    "Registro rápido en 1 clic: Botón de carga instantánea del día completo para usuarios con tarea y jornada fija."
+  ]
+}
