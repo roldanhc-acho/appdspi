@@ -31,10 +31,7 @@ export function HolidaysProvider({ children }: { children: React.ReactNode }) {
             if (cached) {
                 const parsed: HolidayItem[] = JSON.parse(cached)
                 if (Array.isArray(parsed) && parsed.length > 0) {
-                    // Ensure all default holidays are included alongside cached custom ones
-                    const cachedDates = new Set(parsed.map(h => h.date))
-                    const missingDefaults = DEFAULT_HOLIDAYS.filter(dh => !cachedDates.has(dh.date))
-                    return [...parsed, ...missingDefaults].sort((a, b) => a.date.localeCompare(b.date))
+                    return [...parsed].sort((a, b) => a.date.localeCompare(b.date))
                 }
             }
         } catch (e) {
@@ -47,9 +44,10 @@ export function HolidaysProvider({ children }: { children: React.ReactNode }) {
 
     // Helper to persist list in localStorage and state
     const saveHolidaysState = useCallback((newList: HolidayItem[]) => {
-        setHolidays(newList)
+        const sorted = [...newList].sort((a, b) => a.date.localeCompare(b.date))
+        setHolidays(sorted)
         try {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(newList))
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(sorted))
         } catch (e) {
             console.error("Error writing holidays to localStorage", e)
         }
@@ -70,20 +68,6 @@ export function HolidaysProvider({ children }: { children: React.ReactNode }) {
                 } else {
                     console.warn("Error consultando holidays en Supabase:", error)
                 }
-                
-                // If DB query fails, ensure DEFAULT_HOLIDAYS (including Oct 12) are merged with any existing custom ones
-                setHolidays(prev => {
-                    const existingDates = new Set(prev.map(h => h.date))
-                    const missingDefaults = DEFAULT_HOLIDAYS.filter(dh => !existingDates.has(dh.date))
-                    if (missingDefaults.length > 0) {
-                        const merged = [...prev, ...missingDefaults].sort((a, b) => a.date.localeCompare(b.date))
-                        try {
-                            localStorage.setItem(STORAGE_KEY, JSON.stringify(merged))
-                        } catch {}
-                        return merged
-                    }
-                    return prev
-                })
             } else if (data && data.length > 0) {
                 setIsTableMissing(false)
                 const dbHolidays: HolidayItem[] = data.map((item: any) => ({
@@ -94,12 +78,9 @@ export function HolidaysProvider({ children }: { children: React.ReactNode }) {
                     is_custom: item.is_custom !== undefined ? item.is_custom : true,
                     created_at: item.created_at
                 }))
-                
-                // Keep default holidays that aren't overwritten
-                const dbDates = new Set(dbHolidays.map(h => h.date))
-                const missingDefaults = DEFAULT_HOLIDAYS.filter(dh => !dbDates.has(dh.date))
-                const merged = [...dbHolidays, ...missingDefaults].sort((a, b) => a.date.localeCompare(b.date))
-                saveHolidaysState(merged)
+
+                // La base de datos es la fuente única de verdad para que cualquier feriado (incluso oficial) pueda editarse o trasladarse sin duplicarse
+                saveHolidaysState(dbHolidays)
             } else {
                 // Table exists but is empty -> seed with defaults
                 setIsTableMissing(false)
@@ -123,18 +104,18 @@ export function HolidaysProvider({ children }: { children: React.ReactNode }) {
 
         // Try persisting to Supabase
         try {
-            const { data, error } = await supabase.from("holidays").insert([{
+            const { data, error } = await supabase.from("holidays").upsert([{
                 date: newHoliday.date,
                 name: newHoliday.name,
                 type: newHoliday.type,
                 is_custom: true
-            }]).select("id, created_at").maybeSingle()
+            }], { onConflict: "date" }).select("id, created_at").maybeSingle()
 
             if (error) {
                 console.error("Error insertando feriado en Supabase:", error)
                 if (error.code === "PGRST205" || error.message?.includes("holidays")) {
                     setIsTableMissing(true)
-                    dbWarning = "La tabla 'holidays' aún no existe en Supabase. El feriado se guardó temporalmente en este navegador, pero debes crear la tabla en Supabase para que sea visible por todos los usuarios."
+                    dbWarning = "La tabla 'holidays' aún no existe en Supabase. El feriado se guardó temporalmente en este navegador."
                 } else {
                     dbWarning = `Error de base de datos: ${error.message}`
                 }
@@ -167,24 +148,51 @@ export function HolidaysProvider({ children }: { children: React.ReactNode }) {
         })
 
         if (dbWarning) {
-            // Throw so caller UI can display feedback if desired
             throw new Error(dbWarning)
         }
     }
 
     const updateHoliday = async (id: string, updatedData: Partial<HolidayItem>) => {
+        const isLocalFallbackId = id.startsWith("default-") || id.startsWith("custom-")
+        let resolvedId = id
+
         try {
-            const { error } = await supabase.from("holidays").update(updatedData).eq("id", id)
-            if (error) {
-                console.warn("Could not update holiday in Supabase", error)
-                if (error.code === "PGRST205") setIsTableMissing(true)
+            if (isLocalFallbackId) {
+                const existing = holidays.find(h => h.id === id)
+                const payload = {
+                    date: updatedData.date || existing?.date || "",
+                    name: updatedData.name || existing?.name || "",
+                    type: updatedData.type || existing?.type || "feriado",
+                    is_custom: existing?.is_custom ?? false
+                }
+                const { data, error } = await supabase
+                    .from("holidays")
+                    .upsert([payload], { onConflict: "date" })
+                    .select("id")
+                    .maybeSingle()
+
+                if (error) {
+                    console.warn("Could not upsert fallback holiday in Supabase", error)
+                    if (error.code === "PGRST205") setIsTableMissing(true)
+                    else throw new Error(`Error al actualizar el feriado: ${error.message}`)
+                } else if (data?.id) {
+                    resolvedId = String(data.id)
+                }
+            } else {
+                const { error } = await supabase.from("holidays").update(updatedData).eq("id", id)
+                if (error) {
+                    console.warn("Could not update holiday in Supabase", error)
+                    if (error.code === "PGRST205") setIsTableMissing(true)
+                    else throw new Error(`Error al actualizar el feriado: ${error.message}`)
+                }
             }
         } catch (err) {
             console.warn("Could not update holiday in Supabase", err)
+            throw err
         }
 
         setHolidays(prev => {
-            const updated = prev.map(h => h.id === id ? { ...h, ...updatedData } : h)
+            const updated = prev.map(h => h.id === id ? { ...h, ...updatedData, id: resolvedId } : h)
                 .sort((a, b) => a.date.localeCompare(b.date))
             try {
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(updated))
@@ -196,11 +204,14 @@ export function HolidaysProvider({ children }: { children: React.ReactNode }) {
     }
 
     const deleteHoliday = async (id: string) => {
+        const isLocalFallbackId = id.startsWith("default-") || id.startsWith("custom-")
         try {
-            const { error } = await supabase.from("holidays").delete().eq("id", id)
-            if (error) {
-                console.warn("Could not delete holiday from Supabase", error)
-                if (error.code === "PGRST205") setIsTableMissing(true)
+            if (!isLocalFallbackId) {
+                const { error } = await supabase.from("holidays").delete().eq("id", id)
+                if (error) {
+                    console.warn("Could not delete holiday from Supabase", error)
+                    if (error.code === "PGRST205") setIsTableMissing(true)
+                }
             }
         } catch (err) {
             console.warn("Could not delete holiday from Supabase", err)
@@ -218,7 +229,18 @@ export function HolidaysProvider({ children }: { children: React.ReactNode }) {
     }
 
     const resetToDefaults = async () => {
-        saveHolidaysState(DEFAULT_HOLIDAYS)
+        try {
+            const rowsToUpsert = DEFAULT_HOLIDAYS.map(h => ({
+                date: h.date,
+                name: h.name,
+                type: h.type,
+                is_custom: false
+            }))
+            await supabase.from("holidays").upsert(rowsToUpsert, { onConflict: "date" })
+            await fetchHolidays()
+        } catch {
+            saveHolidaysState(DEFAULT_HOLIDAYS)
+        }
     }
 
     const isNonWorkingDay = (date: Date) => {

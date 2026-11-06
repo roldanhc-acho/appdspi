@@ -23,7 +23,7 @@ export const DEFAULT_HOLIDAYS: HolidayItem[] = [
     { id: "default-2026-07-09", date: "2026-07-09", name: "Día de la Independencia", type: "feriado" },
     { id: "default-2026-08-17", date: "2026-08-17", name: "Paso a la Inmortalidad del Gral. José de San Martín", type: "feriado" },
     { id: "default-2026-10-12", date: "2026-10-12", name: "Día del Respeto a la Diversidad Cultural", type: "feriado" },
-    { id: "default-2026-11-20", date: "2026-11-20", name: "Día de la Soberanía Nacional", type: "feriado" },
+    { id: "default-2026-11-23", date: "2026-11-23", name: "Día de la Soberanía Nacional", type: "feriado" },
     { id: "default-2026-12-08", date: "2026-12-08", name: "Día de la Inmaculada Concepción de María", type: "feriado" },
     { id: "default-2026-12-25", date: "2026-12-25", name: "Navidad", type: "feriado" },
 ]
