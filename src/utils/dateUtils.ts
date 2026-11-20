@@ -79,3 +79,13 @@ export function prepareDateForSave(dateString: string): string | null {
     if (!dateString) return null
     return `${dateString}T12:00:00`
 }
+
+/**
+ * Returns today's date in YYYY-MM-DD using local calendar date (safe for UTC-3 after 21:00).
+ */
+export function getLocalTodayISO(referenceDate: Date = new Date()): string {
+    const year = referenceDate.getFullYear()
+    const month = String(referenceDate.getMonth() + 1).padStart(2, '0')
+    const day = String(referenceDate.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+}

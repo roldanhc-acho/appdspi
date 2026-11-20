@@ -1,6 +1,8 @@
 import { useState, useEffect, useMemo } from "react"
 import { supabase } from "@/lib/supabase"
 import { Users, Download, Loader2 } from "lucide-react"
+import { downloadCsv } from "@/utils/csv"
+import { roundHours, sumHourBank } from "@/domain/hours"
 
 type UserStats = {
     userId: string
@@ -25,6 +27,9 @@ export default function HourBankReportPage() {
                 supabase.from("hour_bank").select("user_id, hours_saved, month")
             ])
 
+            if (profilesRes.error) throw profilesRes.error
+            if (hourBanksRes.error) throw hourBanksRes.error
+
             const profiles = profilesRes.data
             const hourBanks = hourBanksRes.data
 
@@ -38,7 +43,7 @@ export default function HourBankReportPage() {
             const stats: UserStats[] = profiles.map(user => {
                 // Bank hours total = sum of all hours_saved for this user
                 const userBanks = (hourBanks || []).filter(b => b.user_id === user.id)
-                const bankHoursTotal = userBanks.reduce((acc, b) => acc + (b.hours_saved || 0), 0)
+                const bankHoursTotal = sumHourBank(userBanks)
 
                 return {
                     userId: user.id,
@@ -62,22 +67,12 @@ export default function HourBankReportPage() {
             u.fullName,
             u.bankHoursTotal
         ])
-
-        const csvContent = [
-            headers.join(','),
-            ...rows.map(r => r.join(','))
-        ].join('\n')
-
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-        const link = document.createElement('a')
-        link.href = URL.createObjectURL(blob)
-        link.download = `banco_de_horas_total.csv`
-        link.click()
+        downloadCsv("banco_de_horas_total.csv", headers, rows)
     }
 
     // Totals
     const totals = useMemo(() => ({
-        bankHoursTotal: userStats.reduce((acc, u) => acc + u.bankHoursTotal, 0)
+        bankHoursTotal: roundHours(userStats.reduce((acc, u) => acc + u.bankHoursTotal, 0))
     }), [userStats])
 
     if (loading) {

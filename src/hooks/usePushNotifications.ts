@@ -187,21 +187,30 @@ export function usePushNotifications() {
     }
   }, [user])
 
-  // Enviar una notificación de prueba al dispositivo actual
+  // Enviar una notificación de prueba al dispositivo/usuario actual
   const sendTestNotification = useCallback(async (): Promise<{ success: boolean; message: string }> => {
     try {
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
       const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+      const { data: { session } } = await supabase.auth.getSession()
+
+      if (!session?.access_token || !user) {
+        return {
+          success: false,
+          message: "Debes iniciar sesión para enviar una notificación de prueba.",
+        }
+      }
 
       const res = await fetch(`${supabaseUrl}/functions/v1/send-agenda-reminders`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${supabaseAnonKey}`,
+          "Authorization": `Bearer ${session.access_token}`,
           "apikey": supabaseAnonKey,
         },
         body: JSON.stringify({
-          broadcast: true,
+          action: "test_device",
+          user_id: user.id,
           title: "DSPI - Notificación de prueba 🔔",
           body: "¡Tus notificaciones de agenda están funcionando correctamente!",
           url: "/agenda",
@@ -210,33 +219,41 @@ export function usePushNotifications() {
 
       const data = await res.json()
       if (!res.ok) {
-        throw new Error(data.message || "No se pudo enviar la notificación de prueba.")
+        throw new Error(data.message || data.error || "No se pudo enviar la notificación de prueba.")
       }
 
       return {
         success: true,
         message: "Notificación de prueba enviada. Deberías verla en tu pantalla en instantes.",
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Error al enviar notificación de prueba:", err)
       return {
         success: false,
-        message: err.message || "Error al enviar la prueba de notificación.",
+        message: err instanceof Error ? err.message : "Error al enviar la prueba de notificación.",
       }
     }
-  }, [])
+  }, [user])
 
   // Disparar manualmente los recordatorios de hoy (útil para admins o pruebas de agenda)
   const triggerTodayReminders = useCallback(async (): Promise<{ success: boolean; message: string; count?: number }> => {
     try {
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
       const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+      const { data: { session } } = await supabase.auth.getSession()
+
+      if (!session?.access_token) {
+        return {
+          success: false,
+          message: "Debes iniciar sesión como administrador para ejecutar recordatorios.",
+        }
+      }
 
       const res = await fetch(`${supabaseUrl}/functions/v1/send-agenda-reminders`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${supabaseAnonKey}`,
+          "Authorization": `Bearer ${session.access_token}`,
           "apikey": supabaseAnonKey,
         },
         body: JSON.stringify({}),
@@ -244,20 +261,20 @@ export function usePushNotifications() {
 
       const data = await res.json()
       if (!res.ok) {
-        throw new Error(data.message || "Error al procesar recordatorios de hoy.")
+        throw new Error(data.message || data.error || "Error al procesar recordatorios de hoy.")
       }
 
-      const count = data.sentCount || 0
+      const count = data.sentCount ?? data.sent ?? 0
       return {
         success: true,
         message: data.message || `Recordatorios procesados (${count} enviados).`,
         count,
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Error al disparar recordatorios:", err)
       return {
         success: false,
-        message: err.message || "Error al procesar recordatorios.",
+        message: err instanceof Error ? err.message : "Error al procesar recordatorios.",
       }
     }
   }, [])

@@ -235,20 +235,27 @@ export default function AgendaPage() {
         try {
             let eventId = editingEvent?.id
 
+            const safeIsPublic = isAdmin ? formData.is_public : false
+
             if (editingEvent) {
-                const { error } = await supabase
+                let updateQuery = supabase
                     .from("events")
                     .update({
                         title: formData.title,
                         description: formData.description || null,
                         event_date: formData.event_date,
                         event_time: formData.event_time || null,
-                        is_public: formData.is_public,
+                        is_public: safeIsPublic,
                         recurrence: formData.recurrence,
                         requires_confirmation: formData.requires_confirmation
                     })
                     .eq("id", editingEvent.id)
 
+                if (!isAdmin) {
+                    updateQuery = updateQuery.eq("created_by", profile.id)
+                }
+
+                const { error } = await updateQuery
                 if (error) throw error
             } else {
                 const { data, error } = await supabase.from("events").insert({
@@ -256,7 +263,7 @@ export default function AgendaPage() {
                     description: formData.description || null,
                     event_date: formData.event_date,
                     event_time: formData.event_time || null,
-                    is_public: formData.is_public,
+                    is_public: safeIsPublic,
                     recurrence: formData.recurrence,
                     requires_confirmation: formData.requires_confirmation,
                     is_confirmed: false,
@@ -285,19 +292,22 @@ export default function AgendaPage() {
             fetchEvents()
             setShowModal(false)
             setEditingEvent(null)
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error("Error saving event:", error)
-            const errorMessage = error.message || "Error desconocido"
-            const errorDetails = error.details || error.hint || ""
-            alert(`Error al guardar el evento: ${errorMessage}\n${errorDetails}`)
+            alert("Error al guardar el evento. Verificá los permisos o los datos ingresados.")
         }
     }
 
     const handleDelete = async (id: string) => {
+        if (!profile) return
         if (!confirm("¿Estás seguro de que deseas eliminar este evento?")) return
 
         try {
-            const { error } = await supabase.from("events").delete().eq("id", id)
+            let deleteQuery = supabase.from("events").delete().eq("id", id)
+            if (!isAdmin) {
+                deleteQuery = deleteQuery.eq("created_by", profile.id)
+            }
+            const { error } = await deleteQuery
             if (error) throw error
             fetchEvents()
         } catch (error) {

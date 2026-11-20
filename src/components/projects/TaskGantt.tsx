@@ -15,6 +15,7 @@ type TaskGanttProps = {
 export function TaskGantt({ tasks, onDateChange }: TaskGanttProps) {
     const { isNonWorkingDay } = useHolidays()
     const [collapsedParents, setCollapsedParents] = useState<Set<string>>(new Set())
+    const [renderNow] = useState(() => Date.now())
     const [view, setView] = useState<ViewMode>(ViewMode.Day)
     const [isFullScreen, setIsFullScreen] = useState(false)
     const containerRef = useRef<HTMLDivElement>(null)
@@ -137,9 +138,9 @@ export function TaskGantt({ tasks, onDateChange }: TaskGanttProps) {
         // Create a list of mother tasks with their effective start dates for sorting
         const motherTasksWithDates = motherTasks.map(mother => {
             const children = subtasksByParent[mother.id] || []
-            let start = safeDate(mother.start_date, mother.created_at || Date.now())
+            let start = safeDate(mother.start_date, mother.created_at || renderNow)
             if (children.length > 0) {
-                const childStarts = children.map(c => safeDate(c.start_date, c.created_at || Date.now()).getTime())
+                const childStarts = children.map(c => safeDate(c.start_date, c.created_at || renderNow).getTime())
                 start = new Date(Math.min(...childStarts))
             }
             return { mother, start }
@@ -155,21 +156,21 @@ export function TaskGantt({ tasks, onDateChange }: TaskGanttProps) {
 
             // Sort children by start date
             children.sort((a, b) => {
-                const aStart = safeDate(a.start_date, a.created_at || Date.now()).getTime()
-                const bStart = safeDate(b.due_date, b.created_at || Date.now()).getTime()
+                const aStart = safeDate(a.start_date, a.created_at || renderNow).getTime()
+                const bStart = safeDate(b.start_date, b.created_at || renderNow).getTime()
                 return aStart - bStart
             })
 
             const isCollapsed = collapsedParents.has(mother.id)
 
             // Calculate mother dates based on children if they exist
-            let motherStart = safeDate(mother.start_date, mother.created_at || Date.now())
+            let motherStart = safeDate(mother.start_date, mother.created_at || renderNow)
             let motherEnd = safeDate(mother.due_date, motherStart.getTime() + 86400000)
 
             if (children.length > 0) {
                 const childDates = children.map(c => ({
-                    start: safeDate(c.start_date, c.created_at || Date.now()),
-                    end: safeDate(c.due_date, safeDate(c.start_date, new Date()).getTime() + 86400000)
+                    start: safeDate(c.start_date, c.created_at || renderNow),
+                    end: safeDate(c.due_date, safeDate(c.start_date, renderNow).getTime() + 86400000)
                 }))
                 motherStart = new Date(Math.min(...childDates.map(d => d.start.getTime())))
                 motherEnd = new Date(Math.max(...childDates.map(d => d.end.getTime())))

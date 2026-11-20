@@ -21,7 +21,7 @@ import HolidaysPage from "@/pages/admin/HolidaysPage"
 import DashboardPage from "@/pages/DashboardPage"
 
 function ProtectedRoute({ children, adminOnly = false }: { children: React.ReactNode; adminOnly?: boolean }) {
-  const { session, profile, isLoading } = useAuth()
+  const { session, profile, isLoading, signOut } = useAuth()
 
   if (isLoading) {
     return <div>Loading...</div>
@@ -29,6 +29,26 @@ function ProtectedRoute({ children, adminOnly = false }: { children: React.React
 
   if (!session) {
     return <Navigate to="/login" replace />
+  }
+
+  if ((profile as { is_active?: boolean | null } | null)?.is_active === false) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-950 p-6 text-white">
+        <div className="max-w-md rounded-xl border border-slate-800 bg-slate-900 p-6 text-center space-y-4">
+          <h1 className="text-xl font-bold">Cuenta desactivada</h1>
+          <p className="text-sm text-slate-400">
+            Tu usuario se encuentra inactivo. Contactá a un administrador si necesitás recuperar el acceso.
+          </p>
+          <button
+            type="button"
+            onClick={() => void signOut()}
+            className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90"
+          >
+            Cerrar sesión
+          </button>
+        </div>
+      </div>
+    )
   }
 
   if (adminOnly && profile?.role !== "admin") {

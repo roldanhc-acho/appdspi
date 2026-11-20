@@ -63,7 +63,11 @@ self.addEventListener("push", (event) => {
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
 
-  const targetUrl = event.notification.data?.url || "/agenda";
+  const rawUrl = event.notification.data?.url;
+  const targetUrl =
+    typeof rawUrl === "string" && rawUrl.startsWith("/") && !rawUrl.startsWith("//")
+      ? rawUrl
+      : "/agenda";
 
   event.waitUntil(
     self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((windowClients) => {

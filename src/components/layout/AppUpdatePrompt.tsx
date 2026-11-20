@@ -1,12 +1,27 @@
 import { useEffect, useState } from "react"
-import { Sparkles, RefreshCw, Calendar, MousePointerClick, Zap } from "lucide-react"
+import { Sparkles, RefreshCw, CheckCircle2 } from "lucide-react"
 
-const CURRENT_APP_VERSION = "2026.11.02-v1"
+const CURRENT_APP_VERSION = __APP_VERSION__
 const STORAGE_KEY = "dspi_ack_app_version"
+
+interface VersionManifest {
+    version: string
+    title?: string
+    highlights?: string[]
+}
+
+const DEFAULT_TITLE = "Nueva actualización disponible"
+const DEFAULT_HIGHLIGHTS = [
+    "Mejoras de estabilidad, rendimiento y correcciones generales en la plataforma.",
+]
 
 export function AppUpdatePrompt() {
     const [showPrompt, setShowPrompt] = useState(false)
-    const [targetVersion, setTargetVersion] = useState(CURRENT_APP_VERSION)
+    const [manifest, setManifest] = useState<VersionManifest>({
+        version: CURRENT_APP_VERSION,
+        title: DEFAULT_TITLE,
+        highlights: DEFAULT_HIGHLIGHTS,
+    })
     const [isUpdating, setIsUpdating] = useState(false)
 
     useEffect(() => {
@@ -16,16 +31,22 @@ export function AppUpdatePrompt() {
             try {
                 const res = await fetch(`/version.json?t=${Date.now()}`, { cache: "no-store" })
                 if (res.ok) {
-                    const data = await res.json()
+                    const data: Partial<VersionManifest> = await res.json()
                     const remoteVersion = data?.version || CURRENT_APP_VERSION
-                    setTargetVersion(remoteVersion)
+                    setManifest({
+                        version: remoteVersion,
+                        title: data?.title || DEFAULT_TITLE,
+                        highlights: Array.isArray(data?.highlights) && data.highlights.length > 0
+                            ? data.highlights
+                            : DEFAULT_HIGHLIGHTS,
+                    })
                     if (ackVersion !== remoteVersion) {
                         setShowPrompt(true)
                         return
                     }
                 }
             } catch {
-                // Fallback a la constante local si falla la red
+                // Fallback a la versión empaquetada si falla la red
             }
 
             if (ackVersion !== CURRENT_APP_VERSION) {
@@ -48,7 +69,7 @@ export function AppUpdatePrompt() {
     const handleUpdateNow = async () => {
         setIsUpdating(true)
         try {
-            localStorage.setItem(STORAGE_KEY, targetVersion)
+            localStorage.setItem(STORAGE_KEY, manifest.version)
 
             if ("serviceWorker" in navigator) {
                 const registrations = await navigator.serviceWorker.getRegistrations()
@@ -68,6 +89,8 @@ export function AppUpdatePrompt() {
 
     if (!showPrompt) return null
 
+    const highlights = manifest.highlights ?? DEFAULT_HIGHLIGHTS
+
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm animate-in fade-in duration-200">
             <div className="w-full max-w-md rounded-2xl border border-slate-700/80 bg-slate-900 p-6 text-white shadow-2xl">
@@ -75,37 +98,28 @@ export function AppUpdatePrompt() {
                     <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/15 border border-primary/30 text-primary">
                         <Sparkles className="h-5 w-5" />
                     </div>
-                    <div>
-                        <h2 className="text-lg font-bold text-white leading-tight">
-                            Nueva actualización disponible
-                        </h2>
+                    <div className="min-w-0 flex-1">
+                        <div className="flex items-center justify-between gap-2">
+                            <h2 className="text-lg font-bold text-white leading-tight truncate">
+                                {manifest.title || DEFAULT_TITLE}
+                            </h2>
+                            <span className="shrink-0 rounded-full bg-primary/20 border border-primary/30 px-2 py-0.5 text-[11px] font-semibold text-primary">
+                                v{manifest.version}
+                            </span>
+                        </div>
                         <p className="text-xs text-slate-400">
                             Actualizá para aplicar las últimas mejoras en la plataforma
                         </p>
                     </div>
                 </div>
 
-                <div className="space-y-3 rounded-xl border border-slate-800 bg-slate-950/60 p-4 mb-5 text-xs sm:text-sm">
-                    <div className="flex items-start gap-2.5">
-                        <Calendar className="h-4 w-4 text-orange-400 shrink-0 mt-0.5" />
-                        <p className="text-slate-300">
-                            <strong className="text-white">Feriados en calendario:</strong> Nuevo fondo naranja difuminado con la descripción del feriado visible en la tarjeta.
-                        </p>
-                    </div>
-
-                    <div className="flex items-start gap-2.5">
-                        <MousePointerClick className="h-4 w-4 text-blue-400 shrink-0 mt-0.5" />
-                        <p className="text-slate-300">
-                            <strong className="text-white">Doble clic para cargar:</strong> Hacé doble clic en un día para abrir directo el formulario de nuevo registro (1 clic despliega el detalle).
-                        </p>
-                    </div>
-
-                    <div className="flex items-start gap-2.5">
-                        <Zap className="h-4 w-4 text-emerald-400 fill-emerald-400 shrink-0 mt-0.5" />
-                        <p className="text-slate-300">
-                            <strong className="text-white">Registro rápido (1 clic):</strong> Botón para completar el día al instante en usuarios con tarea y horario fijo diario.
-                        </p>
-                    </div>
+                <div className="space-y-2.5 rounded-xl border border-slate-800 bg-slate-950/60 p-4 mb-5 text-xs sm:text-sm">
+                    {highlights.map((item, idx) => (
+                        <div key={`${manifest.version}-${idx}`} className="flex items-start gap-2.5">
+                            <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0 mt-0.5" />
+                            <p className="text-slate-300 leading-relaxed">{item}</p>
+                        </div>
+                    ))}
                 </div>
 
                 <button
@@ -121,3 +135,4 @@ export function AppUpdatePrompt() {
         </div>
     )
 }
+

@@ -2,7 +2,6 @@
 // Se ejecuta diariamente a las 8:00 AM (hora Argentina) invocada por pg_cron
 // o bajo demanda desde la app para pruebas de dispositivo y reintentos.
 
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import webpush from "npm:web-push@3.6.7";
 
@@ -19,7 +18,7 @@ interface ReminderRow {
   auth: string;
 }
 
-serve(async (req: Request) => {
+Deno.serve(async (req: Request) => {
   // Manejo de preflight CORS
   if (req.method === "OPTIONS") {
     return new Response("ok", {
@@ -33,10 +32,16 @@ serve(async (req: Request) => {
 
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const vapidPublicKey = Deno.env.get("VAPID_PUBLIC_KEY")!;
     const vapidPrivateKey = Deno.env.get("VAPID_PRIVATE_KEY")!;
     const vapidSubject = Deno.env.get("VAPID_SUBJECT") || "mailto:soporte@dspi.com";
+
+    const corsHeaders = {
+      "Content-Type": "application/json",
+      "Access-Control-Allow-Origin": "*",
+    };
 
     if (!vapidPublicKey || !vapidPrivateKey) {
       throw new Error("Faltan configurar las variables de entorno VAPID_PUBLIC_KEY o VAPID_PRIVATE_KEY en Supabase.");
@@ -48,8 +53,57 @@ serve(async (req: Request) => {
     // Cliente con Service Role para invocar funciones seguras
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
+    // =========================================================================
+    // 0. AUTENTICACIÓN Y AUTORIZACIÓN OBLIGATORIA
+    // =========================================================================
+    const authHeader = req.headers.get("Authorization") ?? "";
+    const bearerToken = authHeader.replace(/^Bearer\s+/i, "").trim();
+
+    if (!bearerToken) {
+      return new Response(
+        JSON.stringify({ success: false, error: "Unauthorized: missing bearer token" }),
+        { headers: corsHeaders, status: 401 }
+      );
+    }
+
+    const isServiceRole = bearerToken === supabaseServiceKey;
+    let callerUserId: string | null = null;
+    let callerRole: string | null = null;
+
+    if (!isServiceRole) {
+      const supabaseUser = createClient(supabaseUrl, supabaseAnonKey, {
+        global: { headers: { Authorization: `Bearer ${bearerToken}` } },
+      });
+      const { data: { user }, error: authError } = await supabaseUser.auth.getUser();
+
+      if (authError || !user) {
+        return new Response(
+          JSON.stringify({ success: false, error: "Unauthorized: invalid or expired token" }),
+          { headers: corsHeaders, status: 401 }
+        );
+      }
+
+      const { data: profile, error: profileError } = await supabaseAdmin
+        .from("profiles")
+        .select("role, is_active")
+        .eq("id", user.id)
+        .single();
+
+      if (profileError || !profile || profile.is_active === false) {
+        return new Response(
+          JSON.stringify({ success: false, error: "Forbidden: inactive or missing profile" }),
+          { headers: corsHeaders, status: 403 }
+        );
+      }
+
+      callerUserId = user.id;
+      callerRole = profile.role;
+    }
+
+    const isAdminOrService = isServiceRole || callerRole === "admin";
+
     // Leer cuerpo opcional de la petición
-    let requestBody: any = {};
+    let requestBody: Record<string, unknown> = {};
     try {
       requestBody = await req.json();
     } catch {
@@ -60,12 +114,21 @@ serve(async (req: Request) => {
     // 1. MODO PRUEBA DE DISPOSITIVO (Envío inmediato a un usuario o dispositivo)
     // =========================================================================
     if (requestBody && requestBody.action === "test_device") {
-      const targetUserId = requestBody.user_id;
+      // Usuarios estándar solo pueden probar sus propios dispositivos
+      const targetUserId = isAdminOrService
+        ? (typeof requestBody.user_id === "string" ? requestBody.user_id : callerUserId)
+        : callerUserId;
+
       let query = supabaseAdmin.from("push_subscriptions").select("*");
       if (targetUserId) {
         query = query.eq("user_id", targetUserId);
-      } else if (requestBody.endpoint) {
+      } else if (isAdminOrService && typeof requestBody.endpoint === "string") {
         query = query.eq("endpoint", requestBody.endpoint);
+      } else {
+        return new Response(
+          JSON.stringify({ success: false, error: "Forbidden" }),
+          { headers: corsHeaders, status: 403 }
+        );
       }
 
       const { data: subs, error: subErr } = await query;
@@ -146,6 +209,12 @@ serve(async (req: Request) => {
     // 2. MODALIDAD BROADCAST (envío masivo a todos los dispositivos registrados)
     // =========================================================================
     if (requestBody && requestBody.broadcast) {
+      if (!isAdminOrService) {
+        return new Response(
+          JSON.stringify({ success: false, error: "Forbidden: admin role required for broadcast" }),
+          { headers: corsHeaders, status: 403 }
+        );
+      }
       console.log("[send-agenda-reminders] Iniciando envío BROADCAST");
       const { data: allSubscriptions, error: subError } = await supabaseAdmin
         .from("push_subscriptions")
@@ -214,7 +283,14 @@ serve(async (req: Request) => {
     // =========================================================================
     // 3. MODO RECORDATORIOS DIARIOS DE AGENDA (Cron regular o Forzado manual)
     // =========================================================================
-    const argentinaDate = requestBody?.target_date || new Intl.DateTimeFormat("en-CA", {
+    if (!isAdminOrService) {
+      return new Response(
+        JSON.stringify({ success: false, error: "Forbidden: admin or service_role required" }),
+        { headers: corsHeaders, status: 403 }
+      );
+    }
+
+    const argentinaDate = (typeof requestBody?.target_date === "string" ? requestBody.target_date : null) || new Intl.DateTimeFormat("en-CA", {
       timeZone: "America/Argentina/Buenos_Aires",
       year: "numeric",
       month: "2-digit",

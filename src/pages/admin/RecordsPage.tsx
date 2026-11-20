@@ -3,6 +3,8 @@ import { supabase } from "@/lib/supabase"
 import { format } from "date-fns"
 import { Calendar, User, Download, ChevronLeft, ChevronRight, Building2, Edit2, Trash2, X, CheckSquare, Loader2 } from "lucide-react"
 import { SearchableSelect, type SelectOption } from "@/components/ui/SearchableSelect"
+import { downloadCsv } from "@/utils/csv"
+import { roundHours } from "@/domain/hours"
 
 // Tipos
 type Profile = { id: string; full_name: string | null }
@@ -251,36 +253,48 @@ export default function RecordsPage() {
             setHasMore((count || 0) > page * pageSize)
 
             // To get the accurate total hours of ALL records matching the filter (not just the current page)
-            // we perform a separate sum query. This ensures the "Total" indicator is correct.
-            let sumQuery = supabase
-                .from("time_logs")
-                .select("hours_worked")
-
-            if (startDate) sumQuery = sumQuery.gte("date", startDate)
-            if (endDate) sumQuery = sumQuery.lte("date", endDate)
-            if (selectedUserId !== "all") sumQuery = sumQuery.eq("user_id", selectedUserId)
-            
-            if (selectedTaskId !== "all") {
-                sumQuery = sumQuery.eq("task_id", selectedTaskId)
-            } else if (selectedClientId !== "all") {
-                // Use the same task IDs we already found
+            // we batch in chunks of 1000 to prevent silent PostgREST truncation.
+            let clientTaskIdsForSum: string[] | null = null
+            if (selectedTaskId === "all" && selectedClientId !== "all") {
                 const { data: directTasks } = await supabase.from('tasks').select('id').eq('client_id', selectedClientId)
                 const { data: projects } = await supabase.from('projects').select('id').eq('client_id', selectedClientId)
-                
-                let allIds: string[] = []
-                if (directTasks) allIds = [...allIds, ...directTasks.map(t => t.id)]
+
+                clientTaskIdsForSum = []
+                if (directTasks) clientTaskIdsForSum = [...clientTaskIdsForSum, ...directTasks.map(t => t.id)]
                 if (projects && projects.length > 0) {
                     const { data: pTasks } = await supabase.from('tasks').select('id').in('project_id', projects.map(p => p.id))
-                    if (pTasks) allIds = [...allIds, ...pTasks.map(t => t.id)]
+                    if (pTasks) clientTaskIdsForSum = [...clientTaskIdsForSum, ...pTasks.map(t => t.id)]
                 }
-                
-                if (allIds.length > 0) sumQuery = sumQuery.in('task_id', allIds)
-                else sumQuery = sumQuery.eq('id', '00000000-0000-0000-0000-000000000000')
             }
 
-            const { data: allLogsForSum } = await sumQuery
-            const total = (allLogsForSum || []).reduce((sum, item) => sum + Number(item.hours_worked || 0), 0)
-            setTotalHours(total)
+            let total = 0
+            const sumBatchSize = 1000
+            let sumFrom = 0
+            while (true) {
+                let sumQuery = supabase
+                    .from("time_logs")
+                    .select("hours_worked")
+
+                if (startDate) sumQuery = sumQuery.gte("date", startDate)
+                if (endDate) sumQuery = sumQuery.lte("date", endDate)
+                if (selectedUserId !== "all") sumQuery = sumQuery.eq("user_id", selectedUserId)
+
+                if (selectedTaskId !== "all") {
+                    sumQuery = sumQuery.eq("task_id", selectedTaskId)
+                } else if (clientTaskIdsForSum !== null) {
+                    if (clientTaskIdsForSum.length > 0) sumQuery = sumQuery.in('task_id', clientTaskIdsForSum)
+                    else sumQuery = sumQuery.eq('id', '00000000-0000-0000-0000-000000000000')
+                }
+
+                const { data: batchSumData, error: sumError } = await sumQuery.range(sumFrom, sumFrom + sumBatchSize - 1)
+                if (sumError) throw sumError
+                if (!batchSumData || batchSumData.length === 0) break
+
+                total += batchSumData.reduce((sum, item) => sum + Number(item.hours_worked || 0), 0)
+                if (batchSumData.length < sumBatchSize) break
+                sumFrom += sumBatchSize
+            }
+            setTotalHours(roundHours(total))
 
         } catch (err) {
             console.error("Error fetching logs:", err)
@@ -400,20 +414,12 @@ export default function RecordsPage() {
                     clientName,
                     projectName,
                     log.task?.title || "Sin Tarea",
-                    log.hours_worked.toFixed(2),
-                    `"${(log.notes || "").replace(/"/g, '""')}"`
+                    Number(log.hours_worked || 0).toFixed(2),
+                    log.notes || ""
                 ]
             })
 
-            const csvContent = [csvHeader, ...csvRows].map(e => e.join(",")).join("\n")
-            const BOM = "\uFEFF"
-            const blob = new Blob([BOM + csvContent], { type: "text/csv;charset=utf-8;" })
-            const url = URL.createObjectURL(blob)
-            const link = document.createElement("a")
-            link.href = url
-            link.download = `reporte_completo_actividades_${format(new Date(), 'yyyy-MM-dd')}.csv`
-            link.click()
-            URL.revokeObjectURL(url)
+            downloadCsv(`reporte_completo_actividades_${format(new Date(), 'yyyy-MM-dd')}.csv`, csvHeader, csvRows)
         } catch (err) {
             console.error("Error exportando CSV:", err)
             alert("Hubo un error al generar el reporte completo.")
@@ -436,10 +442,14 @@ export default function RecordsPage() {
     const handleDelete = async (id: string) => {
         if (!window.confirm("¿Estás seguro de que quieres eliminar este registro permanentemente?")) return
         try {
+            const deletedLog = logs.find(l => l.id === id)
             const { error } = await supabase.from("time_logs").delete().eq("id", id)
             if (error) throw error
             setLogs(logs.filter(l => l.id !== id))
-            setTotalRecords(prev => prev - 1)
+            setTotalRecords(prev => Math.max(0, prev - 1))
+            if (deletedLog) {
+                setTotalHours(prev => roundHours(Math.max(0, prev - Number(deletedLog.hours_worked || 0))))
+            }
         } catch (err) {
             console.error("Error eliminando:", err)
             alert("Error al eliminar")
@@ -459,7 +469,9 @@ export default function RecordsPage() {
                 })
                 .eq("id", editingLog.id)
             if (error) throw error
+            const delta = Number(editForm.hours_worked || 0) - Number(editingLog.hours_worked || 0)
             setLogs(logs.map(l => l.id === editingLog.id ? { ...l, date: editForm.date, hours_worked: editForm.hours_worked, notes: editForm.notes } : l))
+            setTotalHours(prev => roundHours(prev + delta))
             setIsEditModalOpen(false)
             setEditingLog(null)
         } catch (err) {
@@ -504,8 +516,8 @@ export default function RecordsPage() {
                             <Calendar className="w-3 h-3" /> Rango de Fechas
                         </label>
                         <div className="grid grid-cols-2 gap-2">
-                            <input type="date" className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
-                            <input type="date" className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+                            <input type="date" className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none" value={startDate} onChange={(e) => { setStartDate(e.target.value); setPage(1); }} />
+                            <input type="date" className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none" value={endDate} onChange={(e) => { setEndDate(e.target.value); setPage(1); }} />
                         </div>
                     </div>
 
@@ -516,7 +528,7 @@ export default function RecordsPage() {
                         </label>
                         <SearchableSelect
                             value={selectedUserId}
-                            onChange={(val) => setSelectedUserId(val || "all")}
+                            onChange={(val) => { setSelectedUserId(val || "all"); setPage(1); }}
                             options={userOptions}
                             placeholder="Todos los empleados"
                             searchPlaceholder="Buscar empleado..."
@@ -530,7 +542,7 @@ export default function RecordsPage() {
                         </label>
                         <SearchableSelect
                             value={selectedClientId}
-                            onChange={(val) => { setSelectedClientId(val || "all"); setSelectedTaskId("all"); }}
+                            onChange={(val) => { setSelectedClientId(val || "all"); setSelectedTaskId("all"); setPage(1); }}
                             options={clientOptions}
                             placeholder="Todos los clientes"
                             searchPlaceholder="Buscar cliente..."
@@ -544,7 +556,7 @@ export default function RecordsPage() {
                         </label>
                         <SearchableSelect
                             value={selectedTaskId}
-                            onChange={(val) => setSelectedTaskId(val || "all")}
+                            onChange={(val) => { setSelectedTaskId(val || "all"); setPage(1); }}
                             options={taskOptions}
                             placeholder="Todas las tareas"
                             searchPlaceholder="Buscar tarea..."

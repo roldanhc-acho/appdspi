@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, useCallback } from "react"
 import { supabase } from "@/lib/supabase"
 import {
     format,
@@ -11,6 +11,8 @@ import {
 import { es } from "date-fns/locale"
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Users, Download, Loader2 } from "lucide-react"
 import { useHolidays } from "@/contexts/HolidaysContext"
+import { downloadCsv } from "@/utils/csv"
+import { calculateMonthlyUserMetrics, roundHours } from "@/domain/hours"
 
 type UserStats = {
     userId: string
@@ -37,29 +39,55 @@ export default function MonthlyReportPage() {
     const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd })
     const workingDays = daysInMonth.filter(d => !isNonWorkingDay(d)).length
 
-    useEffect(() => {
-        fetchData()
-    }, [currentDate, holidays])
-
-    const fetchData = async () => {
+    const fetchData = useCallback(async () => {
         setLoading(true)
         try {
             const monthStartStr = format(monthStart, 'yyyy-MM-dd')
             const monthEndStr = format(monthEnd, 'yyyy-MM-dd')
 
-            // Fetch all data in parallel (same pattern as ProductiveHoursPage)
-            const [profilesRes, timeLogsRes, absencesRes, hourBanksRes] = await Promise.all([
+            // Fetch batched time_logs to avoid PostgREST 1000-row silent truncation
+            const fetchAllMonthTimeLogs = async () => {
+                const allLogs: Array<{ user_id: string; hours_worked: number }> = []
+                const batchSize = 1000
+                let from = 0
+                while (true) {
+                    const { data, error } = await supabase
+                        .from("time_logs")
+                        .select("user_id, hours_worked")
+                        .gte("date", monthStartStr)
+                        .lte("date", monthEndStr)
+                        .range(from, from + batchSize - 1)
+                    if (error) throw error
+                    if (!data || data.length === 0) break
+                    allLogs.push(...data)
+                    if (data.length < batchSize) break
+                    from += batchSize
+                }
+                return allLogs
+            }
+
+            const [profilesRes, timeLogs, absencesRes, hourBanksRes, productiveRes] = await Promise.all([
                 supabase.from("profiles").select("*").neq("is_active", false).order("full_name"),
-                supabase.from("time_logs").select("user_id, hours_worked").gte("date", monthStartStr).lte("date", monthEndStr),
-                supabase.from("absences").select("user_id, start_date, end_date, type, status, hours").eq("status", "approved"),
-                supabase.from("hour_bank").select("user_id, hours_saved, month")
+                fetchAllMonthTimeLogs(),
+                supabase
+                    .from("absences")
+                    .select("user_id, start_date, end_date, type, status, hours")
+                    .eq("status", "approved")
+                    .lte("start_date", monthEndStr)
+                    .gte("end_date", monthStartStr),
+                supabase.from("hour_bank").select("user_id, hours_saved, month").eq("month", currentMonthStr),
+                supabase.from("productive_hours").select("user_id, hours").eq("month", currentMonthStr)
             ])
 
+            if (profilesRes.error) throw profilesRes.error
+            if (absencesRes.error) throw absencesRes.error
+            if (hourBanksRes.error) throw hourBanksRes.error
+            if (productiveRes.error) throw productiveRes.error
+
             const profiles = profilesRes.data
-            const timeLogs = timeLogsRes.data
             const absences = absencesRes.data
             const hourBanks = hourBanksRes.data
-
+            const productiveEntries = productiveRes.data
 
             if (!profiles || profiles.length === 0) {
                 setUserStats([])
@@ -67,51 +95,50 @@ export default function MonthlyReportPage() {
                 return
             }
 
-            // Calculate stats for each user
+            // Calculate stats for each user using Functional Core
             const stats: UserStats[] = profiles.map(user => {
-                // Hours registered this month
-                const userLogs = (timeLogs || []).filter(l => l.user_id === user.id)
-                const hoursRegistered = userLogs.reduce((acc, l) => acc + l.hours_worked, 0)
+                const userLogs = timeLogs.filter(l => l.user_id === user.id)
+                const hoursRegistered = userLogs.reduce((acc, l) => acc + (l.hours_worked || 0), 0)
 
-                // Per-user daily hours (default 9 if not set)
-                const userDailyHours: number = (user as any).daily_hours ?? 9
-                const userExpectedHours = workingDays * userDailyHours
-
-                // Calculate absence hours using user's own daily hours or registered absence hours
+                const userDailyHours = user.daily_hours ?? 9
                 const userAbsences = (absences || []).filter(a => a.user_id === user.id)
-                let absenceHours = 0
+                let absenceHoursInWorkingDays = 0
 
                 userAbsences.forEach(absence => {
-                    const singleDayHours = (absence as any).hours != null ? Number((absence as any).hours) : userDailyHours
+                    const singleDayHours = absence.hours != null ? Number(absence.hours) : userDailyHours
                     daysInMonth.forEach(day => {
                         const dayStr = format(day, 'yyyy-MM-dd')
                         if (dayStr >= absence.start_date && dayStr <= absence.end_date) {
                             if (!isNonWorkingDay(day)) {
-                                absenceHours += singleDayHours
+                                absenceHoursInWorkingDays += singleDayHours
                             }
                         }
                     })
                 })
 
-                // Productivity = (registered + absences) - expected (per user)
-                const effectiveHours = hoursRegistered + absenceHours
-                const rawProductivity = effectiveHours - userExpectedHours
-
-                // Bank hours for current month only
                 const currentMonthBank = (hourBanks || []).find(b => b.user_id === user.id && b.month === currentMonthStr)
-                const bankHoursThisMonth = currentMonthBank?.hours_saved || 0
+                const bankHoursUsed = currentMonthBank?.hours_saved || 0
+                const manualProductiveHours = (productiveEntries || [])
+                    .filter(p => p.user_id === user.id)
+                    .reduce((acc, p) => acc + (p.hours || 0), 0)
 
-                // Productivity displayed = raw productivity minus what was saved to bank this month
-                const productivityHours = rawProductivity - bankHoursThisMonth
+                const metrics = calculateMonthlyUserMetrics({
+                    dailyHours: userDailyHours,
+                    workingDaysCount: workingDays,
+                    hoursRegistered,
+                    absenceHoursInWorkingDays,
+                    bankHoursUsed,
+                    manualProductiveHours,
+                })
 
                 return {
                     userId: user.id,
                     fullName: user.full_name || 'Sin nombre',
                     avatarUrl: user.avatar_url,
-                    hoursRegistered,
-                    absenceHours,
-                    productivityHours,
-                    bankHours: bankHoursThisMonth
+                    hoursRegistered: metrics.hoursRegistered,
+                    absenceHours: metrics.absenceHours,
+                    productivityHours: metrics.productivityHours,
+                    bankHours: metrics.bankHoursUsed
                 }
             })
 
@@ -121,7 +148,11 @@ export default function MonthlyReportPage() {
             console.error("[MonthlyReport] Error:", error)
         }
         setLoading(false)
-    }
+    }, [currentMonthStr, daysInMonth, isNonWorkingDay, monthEnd, monthStart, workingDays])
+
+    useEffect(() => {
+        fetchData()
+    }, [fetchData, holidays])
 
     const handlePreviousMonth = () => setCurrentDate(subMonths(currentDate, 1))
     const handleNextMonth = () => setCurrentDate(addMonths(currentDate, 1))
@@ -136,25 +167,15 @@ export default function MonthlyReportPage() {
             u.productivityHours,
             u.bankHours
         ])
-
-        const csvContent = [
-            headers.join(','),
-            ...rows.map(r => r.join(','))
-        ].join('\n')
-
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-        const link = document.createElement('a')
-        link.href = URL.createObjectURL(blob)
-        link.download = `resumen_mensual_${currentMonthStr}.csv`
-        link.click()
+        downloadCsv(`resumen_mensual_${currentMonthStr}.csv`, headers, rows)
     }
 
     // Totals
     const totals = useMemo(() => ({
-        hoursRegistered: userStats.reduce((acc, u) => acc + u.hoursRegistered, 0),
-        absenceHours: userStats.reduce((acc, u) => acc + u.absenceHours, 0),
-        productivityHours: userStats.reduce((acc, u) => acc + u.productivityHours, 0),
-        bankHours: userStats.reduce((acc, u) => acc + u.bankHours, 0)
+        hoursRegistered: roundHours(userStats.reduce((acc, u) => acc + u.hoursRegistered, 0)),
+        absenceHours: roundHours(userStats.reduce((acc, u) => acc + u.absenceHours, 0)),
+        productivityHours: roundHours(userStats.reduce((acc, u) => acc + u.productivityHours, 0)),
+        bankHours: roundHours(userStats.reduce((acc, u) => acc + u.bankHours, 0))
     }), [userStats])
 
     if (loading) {
@@ -206,7 +227,7 @@ export default function MonthlyReportPage() {
                     </div>
 
                     <div className="text-sm text-slate-400">
-                        {workingDays} días laborables · {workingDays * 9}h esperadas (jornada estándar 9h)
+                        {workingDays} días laborables · ref. estándar {workingDays * 9}h (ajustado por jornada de cada usuario)
                     </div>
                 </div>
             </div>

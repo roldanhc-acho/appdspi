@@ -57,10 +57,18 @@ export default function AbsencePage() {
     }, [profile?.daily_hours])
 
     useEffect(() => {
+        if (!profile) return
         fetchAbsences()
-    }, [])
+    }, [profile?.id, isAdmin])
+
+    useEffect(() => {
+        return () => {
+            if (filePreviewUrl) URL.revokeObjectURL(filePreviewUrl)
+        }
+    }, [filePreviewUrl])
 
     const fetchAbsences = async () => {
+        if (!profile) return
         try {
             let query = supabase
                 .from("absences")
@@ -220,6 +228,7 @@ export default function AbsencePage() {
     }
 
     const handleUpdateStatus = async (id: string, status: "approved" | "rejected") => {
+        if (!isAdmin) return
         try {
             const { error } = await supabase.from("absences").update({ status }).eq("id", id)
             if (error) throw error
@@ -287,7 +296,7 @@ export default function AbsencePage() {
                                     {absence.reason || "-"}
                                 </td>
                                 <td className="px-4 py-3">
-                                    {absence.attachment_url ? (
+                                    {absence.attachment_url && /^https?:\/\//i.test(absence.attachment_url) ? (
                                         <a
                                             href={absence.attachment_url}
                                             target="_blank"

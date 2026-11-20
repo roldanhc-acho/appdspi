@@ -18,6 +18,8 @@ import { es } from "date-fns/locale"
 import { ChevronLeft, ChevronRight, ChevronDown, Calendar as CalendarIcon, CheckCircle, Trash2, PiggyBank, Plus, Pencil, Clock, Zap } from "lucide-react"
 import { useHolidays } from "@/contexts/HolidaysContext"
 import { SearchableSelect, type SelectOption } from "@/components/ui/SearchableSelect"
+import { getLocalTodayISO } from "@/utils/dateUtils"
+import { isValidHoursInput, roundHours, sumHourBank } from "@/domain/hours"
 
 type TimeLog = Database["public"]["Tables"]["time_logs"]["Row"] & {
     tasks: { title: string, projects: { name: string, client_id: string } | null } | null
@@ -49,6 +51,7 @@ export default function TimeLogsPage() {
     const [bankHoursToSave, setBankHoursToSave] = useState("")
     const [expandedDay, setExpandedDay] = useState<string | null>(null)
     const [quickLoadingDate, setQuickLoadingDate] = useState<string | null>(null)
+    const [isSavingBank, setIsSavingBank] = useState(false)
 
     const QUICK_LOG_USERS: Record<string, { taskId: string, taskTitle: string, hours: number }> = {
         "801f7d64-9bab-42ee-9cc9-43d665795415": { taskId: "246f9e9b-8ba6-47ea-8cd6-12bcb7f3e62b", taskTitle: "Auxiliar de Gama Media", hours: 9 }, // BURGESSER Raul
@@ -64,7 +67,7 @@ export default function TimeLogsPage() {
         id: "",
         client_id: "",
         task_id: "",
-        date: new Date().toISOString().split('T')[0],
+        date: getLocalTodayISO(),
         hours_worked: "",
         notes: "",
     })
@@ -91,7 +94,7 @@ export default function TimeLogsPage() {
         const monthStr = format(start, 'yyyy-MM')
 
         return { monthStart: start, monthEnd: end, monthDays: days, formattedMonth: formatted, currentMonthStr: monthStr }
-    }, [currentDate])
+    }, [currentDate, profile?.id])
 
     const clientOptions = useMemo<SelectOption[]>(() => {
         return clients.map(c => ({
@@ -127,7 +130,7 @@ export default function TimeLogsPage() {
             fetchClients(),
             fetchHourBank()
         ])
-    }, [currentDate])
+    }, [currentDate, profile?.id])
 
     useEffect(() => {
         if (formData.client_id) {
@@ -154,7 +157,8 @@ export default function TimeLogsPage() {
             .select("*")
             .eq("user_id", profile?.id)
             .eq("status", "approved")
-            .or(`start_date.lte.${format(monthEnd, 'yyyy-MM-dd')},end_date.gte.${format(monthStart, 'yyyy-MM-dd')}`)
+            .lte("start_date", format(monthEnd, 'yyyy-MM-dd'))
+            .gte("end_date", format(monthStart, 'yyyy-MM-dd'))
 
         setAbsences(data || [])
     }
@@ -186,7 +190,7 @@ export default function TimeLogsPage() {
             .select("hours_saved")
             .eq("user_id", profile.id)
 
-        const total = (allBanks || []).reduce((acc, b) => acc + (b.hours_saved || 0), 0)
+        const total = sumHourBank(allBanks || [])
         setHourBankTotal(total)
 
         // Fetch current month bank entry (use maybeSingle to handle no result)
@@ -334,7 +338,7 @@ export default function TimeLogsPage() {
                 id: "",
                 client_id: "",
                 task_id: "",
-                date: dateStr || new Date().toISOString().split('T')[0],
+                date: dateStr || getLocalTodayISO(),
                 hours_worked: "",
                 notes: "",
             })
@@ -343,7 +347,9 @@ export default function TimeLogsPage() {
     }
 
     const handleQuickLog = async (dateStr: string) => {
-        if (!profile?.id || !quickLogConfig) return
+        if (!profile?.id || !quickLogConfig || quickLoadingDate) return
+        const alreadyLogged = logs.some(l => l.date === dateStr && l.task_id === quickLogConfig.taskId)
+        if (alreadyLogged) return
         setQuickLoadingDate(dateStr)
         try {
             const { error } = await supabase.from("time_logs").insert([{
@@ -366,21 +372,28 @@ export default function TimeLogsPage() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
+        if (!profile?.id) return
+        const parsedHours = Number(formData.hours_worked)
+        if (!isValidHoursInput(parsedHours)) {
+            alert("Ingresa una cantidad válida de horas (mayor a 0 y hasta 24).")
+            return
+        }
+        e.preventDefault()
         try {
             if (formData.id) {
                 const { error } = await supabase.from("time_logs").update({
                     task_id: formData.task_id,
                     date: formData.date,
-                    hours_worked: Number(formData.hours_worked),
+                    hours_worked: parsedHours,
                     notes: formData.notes,
-                }).eq("id", formData.id)
+                }).eq("id", formData.id).eq("user_id", profile.id)
                 if (error) throw error
             } else {
                 const { error } = await supabase.from("time_logs").insert([{
-                    user_id: profile!.id,
+                    user_id: profile.id,
                     task_id: formData.task_id,
                     date: formData.date,
-                    hours_worked: Number(formData.hours_worked),
+                    hours_worked: parsedHours,
                     notes: formData.notes,
                     type: "regular"
                 }])
@@ -396,11 +409,11 @@ export default function TimeLogsPage() {
     }
 
     const handleDelete = async () => {
-        if (!formData.id) return
+        if (!formData.id || !profile?.id) return
         if (!confirm("¿Estás seguro de que quieres eliminar este registro?")) return
 
         try {
-            const { error } = await supabase.from("time_logs").delete().eq("id", formData.id)
+            const { error } = await supabase.from("time_logs").delete().eq("id", formData.id).eq("user_id", profile.id)
             if (error) throw error
             fetchLogs()
             setShowModal(false)
@@ -411,13 +424,15 @@ export default function TimeLogsPage() {
     }
 
     const handleSaveToBank = async () => {
-        const hoursToSave = Number(bankHoursToSave)
+        if (isSavingBank || !profile?.id) return
+        const hoursToSave = roundHours(Number(bankHoursToSave))
         if (!hoursToSave || hoursToSave <= 0 || hoursToSave > monthStats.availableToSave) {
             alert("Cantidad inválida")
             return
         }
 
         try {
+            setIsSavingBank(true)
             if (currentMonthBank) {
                 // Update existing entry
                 const { error } = await supabase
@@ -433,7 +448,7 @@ export default function TimeLogsPage() {
                 const { error } = await supabase
                     .from("hour_bank")
                     .insert([{
-                        user_id: profile!.id,
+                        user_id: profile.id,
                         month: currentMonthStr,
                         hours_saved: hoursToSave
                     }])
@@ -446,6 +461,8 @@ export default function TimeLogsPage() {
         } catch (error) {
             console.error("Error saving to bank:", error)
             alert("Error al guardar en el banco")
+        } finally {
+            setIsSavingBank(false)
         }
     }
 

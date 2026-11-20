@@ -15,14 +15,15 @@ import {
     X,
     Loader2
 } from "lucide-react"
-import { format, parseISO, differenceInDays } from "date-fns"
+import { format, parseISO, differenceInDays, startOfDay } from "date-fns"
 import { es } from "date-fns/locale"
 
 export default function HolidaysPage() {
     const { holidays, loading, isTableMissing, addHoliday, updateHoliday, deleteHoliday, resetToDefaults } = useHolidays()
 
     const [searchTerm, setSearchTerm] = useState("")
-    const [selectedYear, setSelectedYear] = useState<string>("2026")
+    const currentYear = String(new Date().getFullYear())
+    const [selectedYear, setSelectedYear] = useState<string>(currentYear)
     const [showModal, setShowModal] = useState(false)
     const [editingHoliday, setEditingHoliday] = useState<HolidayItem | null>(null)
     const [isSaving, setIsSaving] = useState(false)
@@ -42,19 +43,18 @@ export default function HolidaysPage() {
     })
 
     const todayStr = format(new Date(), "yyyy-MM-dd")
-    const today = new Date()
 
     // Available years in dataset
     const availableYears = useMemo(() => {
         const years = new Set<string>()
-        years.add("2026")
+        years.add(currentYear)
         holidays.forEach(h => {
             if (h.date) {
                 years.add(h.date.substring(0, 4))
             }
         })
         return Array.from(years).sort()
-    }, [holidays])
+    }, [holidays, currentYear])
 
     // Filtered holidays
     const filteredHolidays = useMemo(() => {
@@ -69,7 +69,7 @@ export default function HolidaysPage() {
 
     // KPI Metrics
     const metrics = useMemo(() => {
-        const currentYearHolidays = holidays.filter(h => h.date.startsWith(selectedYear === "all" ? "2026" : selectedYear))
+        const currentYearHolidays = holidays.filter(h => h.date.startsWith(selectedYear === "all" ? currentYear : selectedYear))
         const upcoming = holidays
             .filter(h => h.date >= todayStr)
             .sort((a, b) => a.date.localeCompare(b.date))
@@ -78,12 +78,12 @@ export default function HolidaysPage() {
         let daysToNext: number | null = null
 
         if (nextHoliday) {
-            const nextDate = parseISO(nextHoliday.date)
-            daysToNext = differenceInDays(nextDate, today)
-            if (daysToNext < 0) daysToNext = 0
+            const nextDate = startOfDay(parseISO(nextHoliday.date))
+            const todayStart = startOfDay(parseISO(todayStr))
+            daysToNext = Math.max(0, differenceInDays(nextDate, todayStart))
         }
 
-        const currentMonthPrefix = format(today, "yyyy-MM")
+        const currentMonthPrefix = todayStr.substring(0, 7)
         const thisMonthCount = holidays.filter(h => h.date.startsWith(currentMonthPrefix)).length
 
         return {
@@ -92,7 +92,7 @@ export default function HolidaysPage() {
             daysToNext,
             thisMonthCount
         }
-    }, [holidays, selectedYear, todayStr])
+    }, [holidays, selectedYear, todayStr, currentYear])
 
     const handleOpenModal = (holiday?: HolidayItem) => {
         setFormError(null)
@@ -276,7 +276,7 @@ export default function HolidaysPage() {
                         <span className="text-3xl font-bold text-slate-900 dark:text-white">
                             {metrics.thisMonthCount}
                         </span>
-                        <span className="text-xs text-slate-500">en {format(today, "MMMM", { locale: es })}</span>
+                        <span className="text-xs text-slate-500">en {format(new Date(), "MMMM", { locale: es })}</span>
                     </div>
                 </div>
             </div>

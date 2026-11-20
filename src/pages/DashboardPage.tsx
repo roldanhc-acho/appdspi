@@ -16,6 +16,8 @@ import {
     TrendingUp
 } from "lucide-react"
 import { TaskModal } from "@/components/projects/TaskModal"
+import { getLocalTodayISO, parseLocalDate } from "@/utils/dateUtils"
+import { roundHours } from "@/domain/hours"
 import {
     BarChart,
     Bar,
@@ -236,13 +238,13 @@ export default function DashboardPage() {
     }
 
     const processStats = (logs: any[], allTasks: any[], projectCount: number, productiveHours: any[] = []) => {
-        const today = new Date().toISOString().split('T')[0]
+        const today = getLocalTodayISO()
         const currentMonthStart = startOfMonth(new Date())
         const lastMonthStart = startOfMonth(subMonths(new Date(), 1))
 
         // Hours Today
         const todayLogs = logs.filter(l => l.date === today)
-        const hoursToday = todayLogs.reduce((acc, curr) => acc + (curr.hours_worked || 0), 0)
+        const hoursToday = roundHours(todayLogs.reduce((acc, curr) => acc + (curr.hours_worked || 0), 0))
 
         // Completed Tasks (Current Month vs Last)
         const completedThisMonth = allTasks.filter(t =>
@@ -498,7 +500,10 @@ export default function DashboardPage() {
                     <div className="space-y-3 sm:space-y-4 max-h-[460px] overflow-y-auto pr-1 sm:pr-2 custom-scrollbar min-w-0">
                         {tasks.map(task => {
                             const progress = taskProgress[task.id] || 0
-                            const isOverdue = task.due_date && new Date(task.due_date) < new Date(new Date().setHours(0, 0, 0, 0)) && task.status !== 'finished' && task.status !== 'cancelled'
+                            const dueLocal = parseLocalDate(task.due_date)
+                            const todayLocalStart = new Date()
+                            todayLocalStart.setHours(0, 0, 0, 0)
+                            const isOverdue = Boolean(dueLocal && dueLocal < todayLocalStart && task.status !== 'finished' && task.status !== 'cancelled')
 
                             return (
                                 <div key={task.id} className={`group flex flex-col gap-2 rounded-lg border p-3 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors min-w-0 ${isOverdue ? 'border-red-500/50 bg-red-500/5' : ''}`}>
@@ -580,7 +585,7 @@ export default function DashboardPage() {
                                 <div className="min-w-0 flex-1">
                                     <p className="font-medium text-xs sm:text-sm dark:text-white truncate">{item.title}</p>
                                     <p className="text-xs sm:text-sm text-slate-500 break-words">{item.desc}</p>
-                                    <p className="mt-1 text-[10px] sm:text-xs text-slate-400">Hace {Math.abs(new Date().getHours() - new Date(item.time).getHours())} horas</p>
+                                    <p className="mt-1 text-[10px] sm:text-xs text-slate-400">Hace {Math.max(0, Math.round((Date.now() - new Date(item.time).getTime()) / 3600000))} horas</p>
                                 </div>
                             </div>
                         ))}
@@ -600,7 +605,10 @@ export default function DashboardPage() {
                             <p className="text-center text-sm text-slate-500 py-4">No hay eventos próximos</p>
                         )}
                         {upcomingEvents.map((event: any) => {
-                            const isPast = new Date(event.event_date) < new Date(new Date().setHours(0, 0, 0, 0))
+                            const eventLocal = parseLocalDate(event.event_date)
+                            const todayLocalStart = new Date()
+                            todayLocalStart.setHours(0, 0, 0, 0)
+                            const isPast = Boolean(eventLocal && eventLocal < todayLocalStart)
                             const needsAttention = event.requires_confirmation && !event.is_confirmed && isPast
 
                             const colorClass = needsAttention
